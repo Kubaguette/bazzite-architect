@@ -8,6 +8,7 @@ body:
       label: "Proposed feature"
       description: "One-line summary of the requested feature."
       placeholder: "e.g. 'Add Go environment scaffolding with module-aware template'"
+    validations:
       required: true
 
   - type: textarea
@@ -15,6 +16,7 @@ body:
       label: "Problem this solves"
       description: "Describe the user pain or gap this feature addresses. Include concrete scenarios."
       placeholder: "Who benefits? In which situations does this help?"
+    validations:
       required: true
 
   - type: dropdown
@@ -26,6 +28,7 @@ body:
         - "System tweak (storage relocation, Podman/Distrobox behavior)"
         - "UI/UX improvement"
         - "Other"
+    validations:
       required: true
 
   - type: textarea
@@ -33,6 +36,7 @@ body:
       label: "How does this help Bazzite / handheld users?"
       description: "Explain the value specifically for immutable-host users (e.g. Steam Deck, Legion Go) or the broader Bazzite community."
       placeholder: "e.g. lowers setup friction for handhelds by reducing image size / improves startup speed..."
+    validations:
       required: true
 
   - type: textarea
@@ -40,6 +44,7 @@ body:
       label: "Suggested implementation notes (optional)"
       description: "If you have ideas about how this could be implemented (Core / Commands / View), list them here. Keep separation of concerns in mind."
       placeholder: "Optional notes: e.g. 'Core: manifest changes; Commands: new IPC command; View: new scaffold wizard'"
+    validations:
       required: false
 
   - type: markdown

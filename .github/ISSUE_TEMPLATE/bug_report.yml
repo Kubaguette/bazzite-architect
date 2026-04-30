@@ -8,6 +8,7 @@ body:
       label: "Short title"
       description: "A clear, one-line summary of the problem (this should be short but descriptive)."
       placeholder: "e.g. 'Sync fails when creating Python environment on Steam Deck'"
+    validations:
       required: true
 
   - type: textarea
@@ -15,6 +16,7 @@ body:
       label: "Description"
       description: "What happened? Describe expected vs actual behavior and any relevant context."
       placeholder: "Expected: ...\nActual: ..."
+    validations:
       required: true
 
   - type: textarea
@@ -22,6 +24,7 @@ body:
       label: "Reproducible steps"
       description: "Step-by-step instructions to reproduce the issue. The more precise the steps the faster we can triage."
       placeholder: "1. Open app\n2. Click 'Create environment'\n3. ..."
+    validations:
       required: true
 
   - type: dropdown
@@ -34,6 +37,7 @@ body:
         - "ROG Ally"
         - "Custom Desktop"
         - "Other"
+    validations:
       required: true
 
   - type: dropdown
@@ -46,6 +50,7 @@ body:
         - "Fedora Kinoite — stable"
         - "Fedora Kinoite — testing"
         - "Other"
+    validations:
       required: true
 
   - type: input
@@ -53,6 +58,7 @@ body:
       label: "Host OS — details (if 'Other' or extra info)"
       description: "If you selected 'Other' above, provide distro/version details here (or extra info like kernel version)."
       placeholder: "e.g. Fedora 38, kernel 6.6.12-300..."
+    validations:
       required: false
 
   - type: textarea
@@ -60,6 +66,7 @@ body:
       label: "Logs (from the app 'Logs' page)"
       description: "Please include relevant logs from the application's 'Logs' page. If logs are large, attach them to the issue (drag & drop) or provide a link to a paste."
       placeholder: "Paste logs here or attach files. If you attach, mention which file(s) you uploaded."
+    validations:
       required: false
 
   - type: checkboxes
