@@ -1,0 +1,47 @@
+name: "Feature request"
+description: "Request a new feature, environment scaffolding, or a system-level improvement for Bazzite Architect."
+title: "Feature request: "
+labels: ["enhancement", "feature-request"]
+body:
+  - type: input
+    attributes:
+      label: "Proposed feature"
+      description: "One-line summary of the requested feature."
+      placeholder: "e.g. 'Add Go environment scaffolding with module-aware template'"
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Problem this solves"
+      description: "Describe the user pain or gap this feature addresses. Include concrete scenarios."
+      placeholder: "Who benefits? In which situations does this help?"
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: "Ecosystem / Focus"
+      description: "Is this a new environment scaffolding or a system/UI tweak?"
+      options:
+        - "Environment scaffolding (new language/runtime e.g. Go, Ruby, PHP)"
+        - "System tweak (storage relocation, Podman/Distrobox behavior)"
+        - "UI/UX improvement"
+        - "Other"
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "How does this help Bazzite / handheld users?"
+      description: "Explain the value specifically for immutable-host users (e.g. Steam Deck, Legion Go) or the broader Bazzite community."
+      placeholder: "e.g. lowers setup friction for handhelds by reducing image size / improves startup speed..."
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Suggested implementation notes (optional)"
+      description: "If you have ideas about how this could be implemented (Core / Commands / View), list them here. Keep separation of concerns in mind."
+      placeholder: "Optional notes: e.g. 'Core: manifest changes; Commands: new IPC command; View: new scaffold wizard'"
+      required: false
+
+  - type: markdown
+    attributes:
+      value: "Thanks! We prioritize small, focused RFCs. If this is a larger architectural change, please open an issue first and link to ARCHITECTURE.md for design discussions."

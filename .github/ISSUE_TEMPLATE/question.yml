@@ -1,0 +1,43 @@
+name: "Question / General discussion"
+description: "General questions about usage, architecture, or setup. Use this to avoid cluttering the bug tracker."
+title: "Question: "
+labels: ["question", "discussion"]
+body:
+  - type: input
+    attributes:
+      label: "Short summary"
+      description: "One-line summary of your question or topic."
+      placeholder: "e.g. 'How do I enable persistent Podman graphroot on Bazzite?'"
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: "Question type"
+      description: "Pick the category that best matches your question."
+      options:
+        - "Usage / setup"
+        - "Architecture / design"
+        - "Contribution / development workflow"
+        - "Other"
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Details"
+      description: "Provide background, what you've tried, and what you expect to happen."
+      placeholder: "Include commands you ran, relevant config, and any error output."
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "| Architecture reference |\n| --- |\n| Before asking architecture or design-level questions, please check ARCHITECTURE.md — it is the Technical Design Authority (TDA) for this project. If your question is about design, reference the relevant section in ARCHITECTURE.md when possible: ./ARCHITECTURE.md |"
+
+  - type: checkboxes
+    attributes:
+      label: "Acknowledgement"
+      description: "Quick check(s) to help keep the tracker clean."
+      options:
+        - label: "I read ARCHITECTURE.md (or I looked and still have a question)"
+          required: true
+        - label: "This is not a reproducible bug (I confirmed this is a question/discussion)"
+          required: false

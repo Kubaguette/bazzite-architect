@@ -1,0 +1,73 @@
+name: "Bug report"
+description: "Report a reproducible bug in Bazzite Architect (host/container orchestration, UI, or backend). Please include device, host OS, and Logs from the app's Logs page."
+title: "Bug: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: input
+    attributes:
+      label: "Short title"
+      description: "A clear, one-line summary of the problem (this should be short but descriptive)."
+      placeholder: "e.g. 'Sync fails when creating Python environment on Steam Deck'"
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Description"
+      description: "What happened? Describe expected vs actual behavior and any relevant context."
+      placeholder: "Expected: ...\nActual: ..."
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Reproducible steps"
+      description: "Step-by-step instructions to reproduce the issue. The more precise the steps the faster we can triage."
+      placeholder: "1. Open app\n2. Click 'Create environment'\n3. ..."
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: "Device"
+      description: "Select the device where the issue occurred."
+      options:
+        - "Steam Deck"
+        - "Legion Go"
+        - "ROG Ally"
+        - "Custom Desktop"
+        - "Other"
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: "Host OS / Channel"
+      description: "Which host OS and channel are you running? (Select the best match)"
+      options:
+        - "Bazzite — stable"
+        - "Bazzite — testing"
+        - "Fedora Kinoite — stable"
+        - "Fedora Kinoite — testing"
+        - "Other"
+      required: true
+
+  - type: input
+    attributes:
+      label: "Host OS — details (if 'Other' or extra info)"
+      description: "If you selected 'Other' above, provide distro/version details here (or extra info like kernel version)."
+      placeholder: "e.g. Fedora 38, kernel 6.6.12-300..."
+      required: false
+
+  - type: textarea
+    attributes:
+      label: "Logs (from the app 'Logs' page)"
+      description: "Please include relevant logs from the application's 'Logs' page. If logs are large, attach them to the issue (drag & drop) or provide a link to a paste."
+      placeholder: "Paste logs here or attach files. If you attach, mention which file(s) you uploaded."
+      required: false
+
+  - type: checkboxes
+    attributes:
+      label: "Pre-checks"
+      description: "Quick confirmations to help triage."
+      options:
+        - label: "I have included reproducible steps and a short title"
+          required: false
+        - label: "I attached or pasted logs from the app's Logs page (if available)"
+          required: false
