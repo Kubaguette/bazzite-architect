@@ -20,11 +20,10 @@ pub struct DriveInfo {
     pub total_gb: u64,
 }
 
-#[tauri::command]
 /// Determine Podman's active storage GraphRoot, normalized for UI use.
 ///
 /// Why: Podman's storage location may be configured independently from HOME. The
-/// command canonicalizes the path and normalizes /var/home -> /home to present a
+/// command canonicalizes the path and normalizes /var.home -> /home to present a
 /// consistent view to the user.
 ///
 /// # Errors
@@ -59,7 +58,6 @@ pub fn get_active_storage_path(app: tauri::AppHandle) -> Result<String, String> 
     }
 }
 
-#[tauri::command]
 /// Scan the system for drives suitable for container storage (home/system/external).
 ///
 /// Architectural intent / Why:
@@ -138,7 +136,6 @@ pub fn scan_drives(app: tauri::AppHandle) -> Result<Vec<DriveInfo>, String> {
     Ok(result)
 }
 
-#[tauri::command]
 /// Configure Podman to use a specific storage graphroot by writing
 /// ~/.config/containers/storage.conf and restarting user podman sockets.
 ///

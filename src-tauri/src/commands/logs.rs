@@ -59,7 +59,6 @@ pub fn append(app: &tauri::AppHandle, source: &str, level: &str, message: &str) 
     let _ = app.emit("app-log", line);
 }
 
-#[tauri::command]
 /// Return the current log buffer as a single string.
 ///
 /// Why: the UI sometimes needs the full history (e.g. when opening a logs
@@ -71,7 +70,6 @@ pub fn get_logs_text() -> Result<String, String> {
     Ok(text)
 }
 
-#[tauri::command]
 /// Clear the in-memory log buffer.
 ///
 /// Why: provide a low-cost way for the frontend to reset visible diagnostics
@@ -83,7 +81,6 @@ pub fn clear_logs() -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
 /// Accept a log line from the frontend (client) and forward it to the
 /// centralized log buffer.
 ///

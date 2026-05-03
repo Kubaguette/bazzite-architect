@@ -17,7 +17,6 @@ pub struct SystemCheckResult {
     pub distrobox_version: Option<String>,
 }
 
-#[tauri::command]
 /// Perform a minimal runtime check for required host components (podman,
 /// distrobox) and return their availability and versions.
 ///

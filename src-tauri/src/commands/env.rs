@@ -89,7 +89,6 @@ pub struct EnvironmentInfo {
 /// # Errors
 /// Returns Err when the underlying distrobox CLI cannot be executed or
 /// returns an error status.
-#[tauri::command]
 pub fn list_environments(app: tauri::AppHandle) -> Result<Vec<EnvironmentInfo>, String> {
     let output = build_host_command("distrobox")
         .args(["list", "--no-color"])
@@ -151,7 +150,6 @@ pub fn list_environments(app: tauri::AppHandle) -> Result<Vec<EnvironmentInfo>, 
     Ok(environments)
 }
 
-#[tauri::command]
 /// Entry point invoked by the frontend to create an environment. This command
 /// schedules the heavyweight creation work on the background runtime and
 /// immediately returns control to the UI.
@@ -327,7 +325,6 @@ pub fn resolve_host_project_path(env_name: &str) -> Option<String> {
     None
 }
 
-#[tauri::command]
 /// Ensure the named environment is started by invoking a no-op command inside
 /// the container (distrobox enter ... true).
 ///
@@ -385,7 +382,6 @@ pub fn start_environment(app: tauri::AppHandle, name: String) -> Result<String, 
     Ok(msg)
 }
 
-#[tauri::command]
 /// Stop the named environment using `distrobox stop --yes`.
 ///
 /// Why: exposes a controlled stop operation that surfaces CLI error output
@@ -440,7 +436,6 @@ pub fn stop_environment(app: tauri::AppHandle, name: String) -> Result<String, S
     Ok(msg)
 }
 
-#[tauri::command]
 /// Delete an environment and optionally its associated host project folder.
 ///
 /// Architectural intent / Why:
@@ -595,7 +590,6 @@ pub async fn delete_environment(
     Ok(ok)
 }
 
-#[tauri::command]
 /// Read the on-disk EnvironmentManifest for a given project path.
 ///
 /// Why: reading a small, predictable manifest avoids expensive project
@@ -625,7 +619,6 @@ pub fn get_environment_manifest(project_path: String) -> Result<EnvironmentManif
     Ok(manifest)
 }
 
-#[tauri::command]
 /// Add a system package to the project's manifest and attempt to install it
 /// inside the running environment.
 ///

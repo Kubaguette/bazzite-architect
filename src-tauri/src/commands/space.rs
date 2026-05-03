@@ -164,7 +164,6 @@ struct SizeUpdatePayload {
     size: u64,
 }
 
-#[tauri::command]
 /// Compute (or retrieve from cache) the byte size of a directory and emit a
 /// size-update event to the provided webview window.
 ///
@@ -355,7 +354,6 @@ pub async fn get_dir_size(
     Ok(())
 }
 
-#[tauri::command]
 /// Resolve a host-side project path for a given environment name.
 ///
 /// Why: this encapsulates the heuristics used to map a container's $HOME to a
@@ -374,7 +372,6 @@ pub fn resolve_project_path(name: String) -> Result<Option<String>, String> {
     Ok(resolve_host_project_path(&env_name))
 }
 
-#[tauri::command]
 /// Retrieve space usage metadata for an environment.
 ///
 /// Why: the command returns opt-in container size information because computing

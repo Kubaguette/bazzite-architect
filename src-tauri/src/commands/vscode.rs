@@ -1,7 +1,6 @@
 use crate::commands::logs;
 use crate::core::util::build_host_command;
 
-#[tauri::command]
 /// Attempt to open the host project folder for a given environment in VS Code.
 ///
 /// Architectural intent / Why:
