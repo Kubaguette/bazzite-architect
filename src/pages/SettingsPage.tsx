@@ -1,3 +1,13 @@
+/**
+ * src/pages/SettingsPage.tsx
+ *
+ * Settings view. Allows running a backend system check and toggling the
+ * "Advanced Mode" flag persisted in localStorage. The system check is
+ * performed by invoking the Tauri command "system_check" which returns a
+ * SystemCheckResult describing availability/version of required host tools.
+ * UI-originating actions are logged via the "client_log" backend command.
+ */
+
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 

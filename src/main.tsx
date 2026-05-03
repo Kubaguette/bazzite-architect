@@ -1,3 +1,11 @@
+/**
+ * src/main.tsx
+ *
+ * Application bootstrap - mounts the React tree into the DOM. Adds a small
+ * CSS-ready marker class when the app has rendered once so the window styling
+ * (rounded corners / transparency) can be revealed safely.
+ */
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";

@@ -1,3 +1,19 @@
+/**
+ * src/context/EnvironmentsContext.tsx
+ *
+ * Context that exposes a list of managed environments (containers) and a
+ * refresh() helper to reload the list from the backend.
+ *
+ * IPC contract:
+ * - The frontend calls the Tauri command "list_environments" with no payload.
+ *   The backend is expected to return EnvironmentInfo[] or null.
+ *   EnvironmentInfo shape:
+ *     { name: string; image: string; status: string; container_id: string }
+ *
+ * This provider preloads the environment list once on app start and exposes
+ * loading metadata so UI components can show spinners where appropriate.
+ */
+
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -18,6 +34,10 @@ interface EnvironmentsCtx {
 
 const Ctx = createContext<EnvironmentsCtx | null>(null);
 
+/**
+ * Provider that fetches and caches the list of environments. Components should
+ * call useEnvironments() to access `envs` and `refresh`.
+ */
 export function EnvironmentsProvider({ children }: { children: ReactNode }) {
   const [envs, setEnvs] = useState<EnvironmentInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,6 +72,10 @@ export function EnvironmentsProvider({ children }: { children: ReactNode }) {
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
+/**
+ * Hook for components to access environment list and refresh helper. Throws
+ * when used outside of the provider.
+ */
 export function useEnvironments(): EnvironmentsCtx {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error("useEnvironments must be used within EnvironmentsProvider");

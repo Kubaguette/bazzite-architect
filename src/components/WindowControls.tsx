@@ -1,3 +1,12 @@
+/**
+ * src/components/WindowControls.tsx
+ *
+ * Small set of native window control buttons (minimize, maximize/restore,
+ * close). Uses Tauri's window API (getCurrentWindow) to operate on the host
+ * window. These operations are performed via the Tauri window object and do
+ * not require custom invoke commands.
+ */
+
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 

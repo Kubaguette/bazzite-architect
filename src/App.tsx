@@ -1,3 +1,22 @@
+/**
+ * src/App.tsx
+ *
+ * Root React application. Wires together top-level providers and global
+ * event listeners for Tauri-driven notifications.
+ *
+ * Providers used:
+ * - BusyProvider: global busy indicator (reference-counted)
+ * - EnvironmentsProvider: fetches and caches the list of environments
+ * - SpaceCacheProvider: frontend cache/request-coalescing for project sizes
+ *
+ * Global event listeners:
+ * - "app-notification": lightweight channel for the backend to surface
+ *    transient notifications of shape { message, type: 'success'|'info'|'error' }
+ * - "size-update": also listened to here to show a brief toast when a
+ *    project size is updated; the authoritative handling of size updates is
+ *    implemented in SpaceCacheContext which updates the cached values.
+ */
+
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import "./App.css";
@@ -44,7 +63,7 @@ function Layout() {
 
 export default function App() {
   useEffect(() => {
-    // Verhindere doppelte Listener-Registrierung (StrictMode/Hot Reload)
+    // Prevent duplicate listener registration (React StrictMode / hot reload)
     const g = globalThis as any;
     if (g.__appNotificationListenerSet) return;
     g.__appNotificationListenerSet = true;
@@ -61,7 +80,7 @@ export default function App() {
         }
       );
 
-      // Auch auf Größen-Updates hören und eine kurze Meldung zeigen
+      // Also listen for size updates and show a brief toast
       await listen<{ path: string; size: number }>("size-update", (evt) => {
         const fmt = (n: number) => {
           const units = ["B", "KB", "MB", "GB", "TB"]; let i = 0; let v = n;

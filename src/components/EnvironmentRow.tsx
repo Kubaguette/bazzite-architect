@@ -1,3 +1,36 @@
+/**
+ * src/components/EnvironmentRow.tsx
+ *
+ * Row component that renders a single managed environment (container) and
+ * exposes controls to start/stop/delete the container, open it in VS Code and
+ * calculate/manage disk usage related to the associated project.
+ *
+ * Props:
+ * - env: basic environment metadata (name, image, status, container_id)
+ * - base: optional precomputed space information provided by the backend
+ *   (project_path, project_bytes, container_size_rw). When project_bytes is
+ *   present we seed the SpaceCache to avoid unnecessary recalculation.
+ * - onOpenVSCode(name): callback to open the given environment in VS Code
+ * - onDelete(name): callback to initiate deletion flow for the environment
+ *
+ * IPC and backend interactions (commands used and expected payloads):
+ * - "resolve_project_path" invoked with { name } and expected to return
+ *   string | null (path to the project on the host) useful to seed the
+ *   SpaceCache and calculate project size.
+ * - "start_environment" invoked with { name } and expected to return a
+ *   short message string on success. The UI sends client-side logs via
+ *   "client_log" before/after the operation; client_log payload shape:
+ *   { source: 'ui', level: 'INFO'|'ERROR', message: string }.
+ * - "stop_environment" invoked with { name } with the same expectations as
+ *   start_environment.
+ *
+ * The component uses the SpaceCache context (see src/context/SpaceCacheContext)
+ * to request and coalesce project size calculations. When a size is missing it
+ * calls requestSize(path) which triggers a backend calculation via
+ * src/utils/dirSizeQueue.requestDirSize and the result is delivered through
+ * a "size-update" event emitted by the backend.
+ */
+
 import { useEffect, useMemo, useCallback, memo, useState, useRef } from "react";
 import { useSpaceCache } from "../context/SpaceCacheContext";
 import { useEnvironments } from "../context/EnvironmentsContext";

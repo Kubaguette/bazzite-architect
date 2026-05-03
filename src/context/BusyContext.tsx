@@ -1,3 +1,22 @@
+/**
+ * src/context/BusyContext.tsx
+ *
+ * Lightweight global busy indicator implemented as a simple reference
+ * counter. Components call startBusy() when beginning long-running UI tasks
+ * (for example initiating backend operations) and call endBusy() when the
+ * task finishes. The derived `isBusy` boolean is true whenever the reference
+ * count is greater than zero.
+ *
+ * This pattern is helpful to coalesce multiple overlapping operations and to
+ * avoid flicker from rapidly toggled spinners. The API is intentionally tiny:
+ * - startBusy(): increment counter
+ * - endBusy(): decrement counter (clamped at 0)
+ * - isBusy: boolean computed from counter
+ *
+ * Use the useBusy() hook to access this context; it throws if used outside the
+ * BusyProvider.
+ */
+
 import { createContext, useContext, useMemo, useState, useCallback, ReactNode } from "react";
 
 type BusyCtx = {
@@ -11,7 +30,7 @@ const Ctx = createContext<BusyCtx | null>(null);
 export function BusyProvider({ children }: { children: ReactNode }) {
   const [count, setCount] = useState(0);
 
-  // Stabile Callback-Identitäten verhindern Effect-Loops in Abhängigkeiten
+  // Stable callback identities prevent effect loops when used in dependency arrays
   const startBusy = useCallback(() => setCount((c) => c + 1), []);
   const endBusy = useCallback(() => setCount((c) => Math.max(0, c - 1)), []);
 

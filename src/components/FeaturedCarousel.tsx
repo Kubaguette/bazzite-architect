@@ -1,3 +1,18 @@
+/**
+ * src/components/FeaturedCarousel.tsx
+ *
+ * Small self-contained carousel used on the dashboard to highlight featured
+ * stacks/templates. Keeps behavior minimal:
+ * - auto-advance at `intervalMs` when the document is visible
+ * - honors an external `running` flag to pause rotation
+ * - reports selection with onSelect(stackKey)
+ *
+ * Props:
+ * - intervalMs?: rotation interval in milliseconds (default 3000)
+ * - onSelect?: callback when a slide is clicked, receives the stack key
+ * - running?: external pause control
+ */
+
 import { useEffect, useMemo, useState } from "react";
 import CPP_Banner from "../assets/CPP_Banner.png";
 import JSTS_Banner from "../assets/JSTS_Banner.png";

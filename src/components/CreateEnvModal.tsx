@@ -1,3 +1,30 @@
+/**
+ * src/components/CreateEnvModal.tsx
+ *
+ * Modal used to create a new environment from a selected template. This
+ * component coordinates with the backend via Tauri IPC and listens for
+ * progress events to show live feedback.
+ *
+ * Props:
+ * - onClose: called when the modal should be closed
+ * - onCreated: optional callback invoked after successful creation
+ * - defaultTemplate/defaultName/defaultHomeMount: optional defaults prefilled in the form
+ *
+ * IPC and event flow:
+ * - The UI subscribes to a Tauri event named "creation-progress" which
+ *   carries CreationProgressPayload objects:
+ *     { stage: string, message: string, level: "info"|"error", done: boolean, success?: boolean }
+ *   The backend is responsible for emitting these events to provide granular
+ *   progress updates. The UI resolves the creation flow when a payload with
+ *   done=true is received.
+ * - When the user submits the form the UI:
+ *    1) Calls "client_log" with a message about the requested creation. Payload: { source: 'ui', level, message }
+ *    2) Invokes "create_environment" with payload: { request: { name, template, homeMount } }
+ *   The backend should start the creation process and emit "creation-progress"
+ *   events. The invoke to create_environment itself is fire-and-forget from the
+ *   perspective of progress reporting - completion is communicated via events.
+ */
+
 import React, { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";

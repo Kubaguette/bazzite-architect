@@ -1,3 +1,20 @@
+/**
+ * src/pages/EnvironmentsPage.tsx
+ *
+ * Page that lists managed environments and provides per-environment actions
+ * (start/stop/delete, open in VS Code, manage packages). The page delegates
+ * environment listing to EnvironmentsContext and uses the SpaceCacheContext to
+ * manage project size calculations. All heavy operations are performed in the
+ * backend via Tauri invoke commands; UI shows progress via BusyContext.
+ *
+ * Important backend commands used here:
+ * - "system_check": returns diagnostic info { podman_ok, distrobox_ok, ... }
+ * - "open_in_vscode": invoked with { name } and expected to return a short
+ *    success message string
+ * - "delete_environment": invoked with { request: { name, deleteProject } }
+ * - "client_log": helper command used to log UI-originated events on the backend
+ */
+
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useBusy } from "../context/BusyContext";
@@ -35,7 +52,7 @@ export default function EnvironmentsPage() {
   useEffect(() => {
     // Log page open
     void invoke("client_log", { source: "ui", level: "INFO", message: "Environments page opened" });
-    // Beim ersten Besuch, wenn noch nichts geladen wurde, einmalig laden
+    // On first visit, if nothing has been loaded yet, load once
     if (envs.length === 0 && !envsLoading) {
       void refresh();
     }
@@ -45,7 +62,7 @@ export default function EnvironmentsPage() {
   }, []);
 
   useEffect(() => {
-    // Keine automatischen Basis-Scans – Seite bleibt IO-frei
+    // No automatic base scans – keep the page IO-free
     setBaseByEnv({});
   }, [envs]);
 
@@ -93,7 +110,7 @@ export default function EnvironmentsPage() {
   };
 
   const deleteEnv = async (name: string) => {
-    // Vermeide blockierende Browser-Dialoge im WebKit-Webview
+    // Avoid blocking browser dialogs inside the WebKit WebView
     setDeletePromptName(name);
   };
 
