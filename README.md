@@ -10,7 +10,7 @@
 
 # Bazzite Architect
 
-A native, low-footprint orchestrator for reproducible, isolated development environments on immutable Linux distributions (Bazzite / Fedora Kinoite).
+A lightweight tool to create reproducible development environments on immutable Linux distributions (Bazzite / Fedora Kinoite).
 
 ---
 
@@ -24,32 +24,55 @@ A native, low-footprint orchestrator for reproducible, isolated development envi
 
 ## Introduction
 
-Bazzite Architect is a desktop application (Tauri + React frontend, Rust backend) that bridges host container tooling (Podman / Distrobox) and IDE DevContainers. It provides a manifest-driven synchronization model that keeps the host-integrated Distrobox environments and IDE DevContainers aligned while preserving the security constraints of immutable operating systems.
+Bazzite Architect is a desktop app that helps you keep development environments in sync on immutable Linux systems. It uses a small Rust backend and a React/Tauri frontend to manage Distrobox and DevContainer setups. A single manifest keeps the host container environment and the IDE container aligned while respecting the constraints of a read-only root filesystem.
 
-For a technical deep dive into the system's internals, design principles, and I/O safety model, check out the ARCHITECTURE.md.
+For a technical deep dive, see ARCHITECTURE.md.
+
+---
+## Why use this?
+
+### 1. Working outside of your IDE
+
+If you exclusively work inside VS Code and only ever use the integrated terminal, you might not need this tool. DevContainers alone will work perfectly fine for you.
+
+**But here is the catch on immutable distros:**
+Because your root filesystem is read-only, you can't just `sudo dnf install` your project's dependencies on your host machine. 
+
+So, what happens when you close VS Code but still want to run a quick build script, use a native git client, or test something in your regular system terminal (like Ptyxis or Alacritty)? 
+**You hit a wall.** Your dependencies (like `gcc`, `cmake`, or Python packages) are locked inside the DevContainer. Your host terminal doesn't know they exist.
+
+To fix this on an immutable OS, you need a **Distrobox** that acts as your mutable host replacement. But keeping your Distrobox and your DevContainer dependencies in sync manually is a frustrating, error-prone mess.
+
+**The Use Case:**
+Bazzite Architect solves exactly this. It gives you the freedom to work outside of your IDE. It uses a single manifest to automatically mirror your dependencies across both worlds. You get the perfect IDE integration of DevContainers *and* a fully capable native terminal environment in Distrobox, without writing the boilerplate twice.
+
+### 2. For Newcomers to Immutable Linux
+If you are coming from a traditional OS (like Ubuntu or Windows), the concept of rootless containers, Podman, and Distrobox can be overwhelming. You just want to write code. Instead of figuring out why a standard package installation fails, or wrestling with surgical terminal commands pointing to specific binary paths just to install a simple library, **Bazzite Architect abstracts the complexity away**. It gives you a simple GUI to spin up a working, isolated workspace in seconds without having to read pages of container documentation.
+
+When you need a new system package (like a compiler or a specific library), you simply select it in the app's interface. The application automatically runs the necessary terminal commands in the background to install it in your host terminal and syncs it to your IDE environment at the same time.
 
 ---
 
 ## Key Technical Features
 
-- 🧩 **Native Performance (Rust):** Lightweight, memory-safe backend for command orchestration and I/O-heavy tasks.
-- 🔒 **Rootless Security:** All container operations are executed in user-space (rootless Podman / Distrobox) to minimize system-level risk.
-- 🗂️ **Manifest-driven Sync Engine:** A single, declarative `.bazzite-architect.json` manifest drives idempotent synchronization between Distrobox and DevContainer state.
-- 💾 **Storage Relocation:** Guided, safe reconfiguration of Podman's per-user GraphRoot to offload images and writable layers from constrained system disks.
+- Rust backend: fast and memory-safe code for background tasks.
+- Rootless operation: uses user-level Podman/Distrobox so no root access is required.
+- Single manifest: one .bazzite-architect.json controls synchronization between host Distrobox and DevContainer.
+- Storage helpers: tools to move Podman user storage to another location to save space on constrained disks.
 
 ---
 
 ## Supported Environments
 
-Bazzite Architect currently provides zero-config scaffolding and native DevContainer synchronization for **5 major ecosystems**:
+Bazzite Architect provides scaffolding and DevContainer sync for these ecosystems:
 
-- 🐍 **Python** (Data Science, AI, Scripting)
-- ⚛️ **Node / React** (Frontend & Fullstack TS/JS)
-- 🦀 **Rust** (Systems Programming)
-- ☕ **Java** (Enterprise Backend)
-- ⚙️ **C / C++** (Native & Embedded)
+- Python (data science, AI, scripting)
+- Node / React (frontend & fullstack)
+- Rust (systems)
+- Java (backend)
+- C / C++ (native & embedded)
 
-*Each environment is automatically scaffolded with the correct build manifests and language-specific VS Code extensions.* 
+Each environment includes a starter manifest and suggested VS Code extensions. 
 
 ---
 
@@ -57,18 +80,18 @@ Bazzite Architect currently provides zero-config scaffolding and native DevConta
 
 | Concern | Manual Distrobox / DevContainer Setup | Bazzite Architect |
 |---|---:|---|
-| Repeatable setup | ad-hoc scripts, manual edits | declarative manifest + scaffolding |
-| Security model | depends on individual setup | rootless Podman + guarded mounts |
-| Drift handling | manual reconciliation | manifest-driven sync (MVP) |
-| Disk management | manual moves / ad-hoc | guided storage relocation |
+| Repeatable setup | ad-hoc scripts and manual edits | declarative manifest + scaffolding |
+| Security model | varies by setup | rootless Podman with controlled mounts |
+| Drift handling | manual reconciliation | manifest-driven sync |
+| Disk management | manual moves | guided storage relocation |
 
 ---
 
-## Roadmap (high level)
+## Roadmap
 
-- ✅ MVP: Environment creation, manifest-driven sync, storage relocation
-- 🔜 Planned: Drift detection and adoption flows
-- 🔁 In progress: Transactional rollback primitives for sync operations
+- ✅ MVP (done): environment creation, manifest-based sync, storage relocation
+- 🔜 Next: drift detection and adoption flows
+- 🔜 In progress: transactional rollback for sync operations
 
 
 ---
@@ -161,11 +184,7 @@ Note: npm run tauri dev compiles the Rust backend and starts the Vite dev server
 
 ## Developer Hub
 
-This repository includes a comprehensive design document: **ARCHITECTURE.md** — the Technical Design Authority for the project. It contains in-depth explanations of the sync logic, I/O safety model (bounded parallelism, caching, cancellation), storage heuristics, and contribution guidelines.
-
-> Read the Technical Design Authority: [ARCHITECTURE.md](./ARCHITECTURE.md)
-
-If you are contributing or auditing the implementation, start there.
+See ARCHITECTURE.md for design details and the sync logic. If you plan to contribute or review the system, start there.
 
 ---
 
