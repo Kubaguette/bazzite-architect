@@ -6,6 +6,12 @@ use sysinfo::Disks;
 use tauri::Emitter;
 
 #[derive(Serialize)]
+/// Information about a candidate storage drive suitable for storing container
+/// data.
+///
+/// Why: provides a compact, frontend-friendly representation with human-meaningful
+/// units (GB) so the UI can present capacity and suitability heuristics without
+/// invoking low-level OS APIs directly.
 pub struct DriveInfo {
     pub name: String,
     pub file_system: String,
@@ -14,6 +20,14 @@ pub struct DriveInfo {
     pub total_gb: u64,
 }
 
+/// Determine Podman's active storage GraphRoot, normalized for UI use.
+///
+/// Why: Podman's storage location may be configured independently from HOME. The
+/// command canonicalizes the path and normalizes /var.home -> /home to present a
+/// consistent view to the user.
+///
+/// # Errors
+/// Returns Err when the podman command fails or returns no GraphRoot.
 #[tauri::command]
 pub fn get_active_storage_path(app: tauri::AppHandle) -> Result<String, String> {
     let output = build_host_command("podman")
@@ -44,6 +58,17 @@ pub fn get_active_storage_path(app: tauri::AppHandle) -> Result<String, String> 
     }
 }
 
+/// Scan the system for drives suitable for container storage (home/system/external).
+///
+/// Architectural intent / Why:
+/// - Filters out overlay/ghost mounts and unsupported filesystems to avoid
+///   suggesting locations that will lead to runtime errors or poor performance.
+/// - Uses heuristics to include the user's home and common external mounts but
+///   keeps the list small so the UI can present a concise set of options.
+///
+/// # Errors
+/// This function currently never returns Err for scanning logic; failures are
+/// surfaced via logging and by returning an empty set.
 #[tauri::command]
 pub fn scan_drives(app: tauri::AppHandle) -> Result<Vec<DriveInfo>, String> {
     let disks = Disks::new_with_refreshed_list();
@@ -111,6 +136,17 @@ pub fn scan_drives(app: tauri::AppHandle) -> Result<Vec<DriveInfo>, String> {
     Ok(result)
 }
 
+/// Configure Podman to use a specific storage graphroot by writing
+/// ~/.config/containers/storage.conf and restarting user podman sockets.
+///
+/// Why: changing Podman's graphroot is potentially disruptive; this function
+/// performs safe checks, writes a minimal overlay-based configuration, and
+/// restarts the user podman socket to pick up changes. It also writes a small
+/// tracker ignore file to avoid desktop indexers scanning large storage trees.
+///
+/// # Errors
+/// Returns Err on filesystem errors (writing/removing the config) or when HOME
+/// cannot be determined.
 #[tauri::command]
 pub fn apply_storage_setup(app: tauri::AppHandle, target_path: String) -> Result<String, String> {
     let home_dir = std::env::var("HOME").map_err(|_| "Failed to read HOME".to_string())?;

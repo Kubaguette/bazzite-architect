@@ -13,6 +13,12 @@ use tauri::Emitter;
 use tauri::Manager;
 
 #[derive(Serialize)]
+/// Space usage information for a single environment.
+///
+/// Why: provides a compact payload for the UI to show both project-local
+/// storage and optional container writable-layer size. project_bytes is left as
+/// None in this iteration to avoid expensive synchronous filesystem scans; the
+/// frontend can request directory sizes separately via get_dir_size.
 pub struct EnvironmentSpaceInfo {
     pub project_path: Option<String>,
     pub project_bytes: Option<u64>,
@@ -84,6 +90,12 @@ fn ensure_cache_file(app: &tauri::AppHandle) -> PathBuf {
 fn load_cache(app: &tauri::AppHandle) {
     let mut cache = SIZE_CACHE
         .get_or_init(|| Mutex::new(SizeCache::default()))
+        // SAFETY: this mutex is initialized above in a single-threaded fashion on
+        // first access. Locking may panic only if the mutex is poisoned due to a
+        // thread panic while holding it; in this process-level cache that would
+        // indicate a serious internal error and it is acceptable to propagate
+        // the problem by unwrapping. If poisoned-recovery is required later,
+        // replace unwrap() with lock().unwrap_or_else(|g| g.into_inner()).
         .lock()
         .unwrap();
     if cache.file.is_some() {
@@ -135,6 +147,11 @@ fn dir_size_parallel(path: &Path, gen_at_start: u64) -> u64 {
 }
 
 #[tauri::command]
+/// Cancel any in-progress directory size computations.
+///
+/// Why: long-running directory walks are cooperative and check a generation
+/// counter to abort early. Incrementing the generation ensures currently
+/// running workers observe the change and exit without expensive cleanup.
 pub fn cancel_dir_size_jobs(app: tauri::AppHandle) {
     // Bump generation; active walkers will observe the change and exit quickly
     DIR_SIZE_GEN.fetch_add(1, Ordering::Relaxed);
@@ -147,6 +164,22 @@ struct SizeUpdatePayload {
     size: u64,
 }
 
+/// Compute (or retrieve from cache) the byte size of a directory and emit a
+/// size-update event to the provided webview window.
+///
+/// Architectural intent / Why:
+/// - Uses an on-disk cache to avoid repeated expensive IO for stable paths.
+/// - Uses podman/podman system df as a fast-path when the path looks like a
+///   container graphroot to avoid traversing potentially massive storage trees.
+/// - When falling back to walking the filesystem, uses a throttled parallel
+///   walker (bounded Rayon thread-pool) to limit IO concurrency and avoid
+///   starving the system.
+/// - Supports cancellation via a generation counter so the UI can abort
+///   long-running operations without blocking.
+///
+/// # Errors
+/// Returns Err(String) if the background task join is cancelled or panics; the
+/// returned error contains the join diagnostic.
 #[tauri::command]
 pub async fn get_dir_size(
     window: tauri::WebviewWindow,
@@ -321,6 +354,15 @@ pub async fn get_dir_size(
     Ok(())
 }
 
+/// Resolve a host-side project path for a given environment name.
+///
+/// Why: this encapsulates the heuristics used to map a container's $HOME to a
+/// local filesystem path (findmnt, podman inspect, /var/home mapping and a
+/// simple inferred-home heuristic). Exposing this as a command centralizes the
+/// logic and makes it easier for the UI to open the right folder.
+///
+/// # Errors
+/// Returns Err if the provided environment name is empty.
 #[tauri::command]
 pub fn resolve_project_path(name: String) -> Result<Option<String>, String> {
     let env_name = name.trim().to_string();
@@ -330,6 +372,16 @@ pub fn resolve_project_path(name: String) -> Result<Option<String>, String> {
     Ok(resolve_host_project_path(&env_name))
 }
 
+/// Retrieve space usage metadata for an environment.
+///
+/// Why: the command returns opt-in container size information because computing
+/// container image/writable-layer sizes may be slow and requires calling out to
+/// external tooling. The implementation delegates heavier tasks to a blocking
+/// thread pool to avoid blocking the async runtime.
+///
+/// # Errors
+/// Returns Err if the provided environment name is empty or if the blocking
+/// join is cancelled or panics.
 #[tauri::command]
 pub async fn get_environment_space(
     app: tauri::AppHandle,

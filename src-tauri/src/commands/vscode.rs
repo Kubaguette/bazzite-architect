@@ -1,6 +1,21 @@
 use crate::commands::logs;
 use crate::core::util::build_host_command;
 
+/// Attempt to open the host project folder for a given environment in VS Code.
+///
+/// Architectural intent / Why:
+/// - Uses multiple heuristics (findmnt, podman inspect, /var/home mapping and
+///   a simple inferred-home heuristic) to robustly map a container's $HOME to a
+///   host filesystem path across diverse Fedora/Silverblue setups.
+/// - Tries multiple launchers (flatpak, system 'code', 'codium') and returns
+///   a helpful debug string on failure to aid troubleshooting.
+/// - Spawns the editor without awaiting long-running child processes to avoid
+///   blocking the invoking thread.
+///
+/// # Errors
+/// Returns Err(String) when no environment name is provided or when all
+/// attempted launchers fail; the returned string includes a debug trace useful
+/// for diagnostics.
 #[tauri::command]
 pub fn open_in_vscode(app: tauri::AppHandle, name: String) -> Result<String, String> {
     logs::info(&app, "vscode", format!("open_in_vscode start: '{}'", name));
