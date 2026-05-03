@@ -63,7 +63,7 @@ function Layout() {
 
 export default function App() {
   useEffect(() => {
-    // Verhindere doppelte Listener-Registrierung (StrictMode/Hot Reload)
+    // Prevent duplicate listener registration (React StrictMode / hot reload)
     const g = globalThis as any;
     if (g.__appNotificationListenerSet) return;
     g.__appNotificationListenerSet = true;
@@ -80,7 +80,7 @@ export default function App() {
         }
       );
 
-      // Auch auf Größen-Updates hören und eine kurze Meldung zeigen
+      // Also listen for size updates and show a brief toast
       await listen<{ path: string; size: number }>("size-update", (evt) => {
         const fmt = (n: number) => {
           const units = ["B", "KB", "MB", "GB", "TB"]; let i = 0; let v = n;

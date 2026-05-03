@@ -52,7 +52,7 @@ export default function EnvironmentsPage() {
   useEffect(() => {
     // Log page open
     void invoke("client_log", { source: "ui", level: "INFO", message: "Environments page opened" });
-    // Beim ersten Besuch, wenn noch nichts geladen wurde, einmalig laden
+    // On first visit, if nothing has been loaded yet, load once
     if (envs.length === 0 && !envsLoading) {
       void refresh();
     }
@@ -62,7 +62,7 @@ export default function EnvironmentsPage() {
   }, []);
 
   useEffect(() => {
-    // Keine automatischen Basis-Scans – Seite bleibt IO-frei
+    // No automatic base scans – keep the page IO-free
     setBaseByEnv({});
   }, [envs]);
 
@@ -110,7 +110,7 @@ export default function EnvironmentsPage() {
   };
 
   const deleteEnv = async (name: string) => {
-    // Vermeide blockierende Browser-Dialoge im WebKit-Webview
+    // Avoid blocking browser dialogs inside the WebKit WebView
     setDeletePromptName(name);
   };
 
