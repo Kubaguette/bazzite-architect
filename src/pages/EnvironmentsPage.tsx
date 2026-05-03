@@ -1,3 +1,20 @@
+/**
+ * src/pages/EnvironmentsPage.tsx
+ *
+ * Page that lists managed environments and provides per-environment actions
+ * (start/stop/delete, open in VS Code, manage packages). The page delegates
+ * environment listing to EnvironmentsContext and uses the SpaceCacheContext to
+ * manage project size calculations. All heavy operations are performed in the
+ * backend via Tauri invoke commands; UI shows progress via BusyContext.
+ *
+ * Important backend commands used here:
+ * - "system_check": returns diagnostic info { podman_ok, distrobox_ok, ... }
+ * - "open_in_vscode": invoked with { name } and expected to return a short
+ *    success message string
+ * - "delete_environment": invoked with { request: { name, deleteProject } }
+ * - "client_log": helper command used to log UI-originated events on the backend
+ */
+
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useBusy } from "../context/BusyContext";

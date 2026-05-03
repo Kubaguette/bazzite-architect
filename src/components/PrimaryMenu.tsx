@@ -1,3 +1,16 @@
+/**
+ * src/components/PrimaryMenu.tsx
+ *
+ * Primary application menu (hamburger). Keeps responsibilities small: it
+ * dispatches high-level user actions (open docs, report bug, show About).
+ * Where possible it uses the Tauri opener plugin (openUrl) to open links in
+ * the user's default browser. Fallbacks to window.open / location.href are
+ * provided for environments where the plugin might not be available.
+ *
+ * Props:
+ * - onAbout?: optional callback invoked when the About item is selected.
+ */
+
 import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 

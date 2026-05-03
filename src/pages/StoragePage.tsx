@@ -1,3 +1,17 @@
+/**
+ * src/pages/StoragePage.tsx
+ *
+ * Storage management UI. Interacts with the backend through several Tauri
+ * commands to scan available drives, read/apply the active storage path, and
+ * update storage configuration.
+ *
+ * Commands used:
+ * - "scan_drives": returns DriveInfo[]
+ * - "get_active_storage_path": returns string
+ * - "apply_storage_setup": invoked with { targetPath } and returns a message
+ * - "client_log": used to forward backend messages to the central logs
+ */
+
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useBusy } from "../context/BusyContext";

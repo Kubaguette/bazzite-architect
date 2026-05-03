@@ -1,3 +1,19 @@
+/**
+ * src/components/HeaderBar.tsx
+ *
+ * Header bar component used across the app. It follows GNOME/Libadwaita
+ * visual placement by showing the primary application menu next to the native
+ * window controls. The header also contains the view switcher navigation.
+ *
+ * Behavior notes:
+ * - Drag handling: clicking and dragging on the header starts a native window
+ *   drag via the Tauri command "drag_window". This avoids WebView drag lag on
+ *   Wayland. The invoke call is fire-and-forget and expects no payload or
+ *   response.
+ * - The component toggles visibility of advanced views based on a value
+ *   persisted in localStorage under "advancedMode".
+ */
+
 import { useEffect, useState } from "react";
 import type { MouseEventHandler } from "react";
 import { NavLink } from "react-router-dom";

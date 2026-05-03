@@ -1,3 +1,25 @@
+/**
+ * src/components/ManagePackagesModal.tsx
+ *
+ * Modal UI to view and install system packages declared in an environment's
+ * manifest. This component delegates package installation to the Rust backend
+ * via Tauri IPC and displays backend-provided manifest data.
+ *
+ * Props:
+ * - isOpen: whether the modal is visible
+ * - onClose: callback to request closing the modal
+ * - environmentName: environment identifier used when instructing the backend
+ * - projectPath: absolute host path to the project (may be null)
+ *
+ * IPC contract (commands used):
+ * - "get_environment_manifest": invoke with { projectPath } and expect an
+ *    EnvironmentManifest object shaped as { version, name, stack, system_packages }.
+ * - "install_system_package": invoke with { name: environmentName, projectPath, package }
+ *    The backend is responsible for performing the installation and returning
+ *    a success/failure result (errors are bubbled to the UI). The UI attempts
+ *    to extract a useful error message from the thrown payload for display.
+ */
+
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";

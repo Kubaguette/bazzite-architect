@@ -1,3 +1,11 @@
+/**
+ * src/pages/DashboardPage.tsx
+ *
+ * Dashboard landing page. Provides quick actions (create environment) and
+ * showcases featured stacks via the FeaturedCarousel. Uses CreateEnvModal to
+ * start the creation flow and delegates list refresh to EnvironmentsContext.
+ */
+
 import { useState } from "react";
 import { useBusy } from "../context/BusyContext";
 import { useEnvironments } from "../context/EnvironmentsContext";
@@ -30,7 +38,7 @@ export default function DashboardPage() {
       java: "Java_Project",
     };
     const suggestedName = nameMap[t];
-    const home = `$HOME/BazziteArchitect/Projects/${suggestedName}`; // wird im Backend expandiert
+    const home = `$HOME/BazziteArchitect/Projects/${suggestedName}`; // will be expanded by the backend
     setDefaults({ template: t, name: suggestedName, home });
     setShowCreate(true);
   };

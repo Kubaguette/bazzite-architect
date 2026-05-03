@@ -1,3 +1,11 @@
+/**
+ * src/pages/LogsPage.tsx
+ *
+ * Power-user logs view. Loads historical logs via the "get_logs_text" command
+ * and subscribes to the "app-log" event for live updates. The user may copy
+ * or clear logs; clearing is performed by invoking the "clear_logs" command.
+ */
+
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";

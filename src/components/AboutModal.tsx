@@ -1,3 +1,14 @@
+/**
+ * src/components/AboutModal.tsx
+ *
+ * Simple About dialog. Offers a link to the project repository which is
+ * opened via the Tauri opener plugin (openUrl). Falls back to window.open if
+ * the plugin call fails (useful for development in non-Tauri environments).
+ *
+ * Props:
+ * - onClose(): callback invoked when the modal requests to be closed.
+ */
+
 import { useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
