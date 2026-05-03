@@ -2,6 +2,11 @@ pub mod commands;
 pub mod core;
 
 mod windowcmds {
+    /// Request the native window to start a drag operation.
+    ///
+    /// Why: the UI cannot directly control window drag from the renderer process
+    /// on all platforms. Exposing this command provides a minimal bridge so the
+    /// frontend can implement custom titlebars without blocking the UI thread.
     #[tauri::command]
     pub async fn drag_window(window: tauri::WebviewWindow) -> Result<(), String> {
         window
@@ -11,6 +16,12 @@ mod windowcmds {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// Initialize and run the Tauri application.
+///
+/// Why: central application bootstrap that registers plugins and all
+/// invoke-handler commands. Keeping this in a single function isolates
+/// platform-specific setup (e.g. Wayland diagnostics) and ensures the
+/// application initialization path is auditable and testable.
 pub fn run() {
     use tauri::Manager;
 
@@ -76,6 +87,10 @@ pub fn run() {
             Ok(())
         });
 
+    // SAFETY: run() returns a Result which will only be Err on startup failure
+    // (invalid configuration or platform support issues). It is appropriate to
+    // treat failure to run the application as fatal at this point and surface a
+    // clear message for diagnostic purposes.
     builder
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -55,6 +55,11 @@ impl ProgressPayload {
 }
 
 #[derive(Deserialize)]
+/// Request payload for creating an environment from the frontend.
+///
+/// Why: mirrors the minimal fields the UI needs to request environment
+/// creation. The `home_mount` field is optional so the backend can apply
+/// sensible defaults and perform central validation.
 pub struct CreateEnvironmentRequest {
     pub name: String,
     pub template: String,
@@ -63,6 +68,10 @@ pub struct CreateEnvironmentRequest {
 }
 
 #[derive(Serialize)]
+/// Public description of an environment container returned to the UI.
+///
+/// Why: returns a compact row-like representation suitable for listing views
+/// without transmitting full container metadata.
 pub struct EnvironmentInfo {
     pub name: String,
     pub image: String,
@@ -70,6 +79,16 @@ pub struct EnvironmentInfo {
     pub container_id: String,
 }
 
+#[tauri::command]
+/// List available distrobox environments (containers) on the host.
+///
+/// Why: abstracts parsing of distrobox CLI output into a structured format
+/// consumed by the UI. Parsing tolerates common table and fenced output
+/// formats to be resilient across versions.
+///
+/// # Errors
+/// Returns Err when the underlying distrobox CLI cannot be executed or
+/// returns an error status.
 #[tauri::command]
 pub fn list_environments(app: tauri::AppHandle) -> Result<Vec<EnvironmentInfo>, String> {
     let output = build_host_command("distrobox")
@@ -132,6 +151,19 @@ pub fn list_environments(app: tauri::AppHandle) -> Result<Vec<EnvironmentInfo>, 
     Ok(environments)
 }
 
+#[tauri::command]
+/// Entry point invoked by the frontend to create an environment. This command
+/// schedules the heavyweight creation work on the background runtime and
+/// immediately returns control to the UI.
+///
+/// Why: creating an environment involves long-running external calls and file
+/// scaffolding. Scheduling the work asynchronously prevents blocking the
+/// main invoke thread and allows progress to be streamed back via events.
+///
+/// # Errors
+/// Returns Err only if the request payload validation fails synchronously
+/// (e.g. empty name). Runtime failures during creation are reported via
+/// progress events and notifications emitted from the background task.
 #[tauri::command]
 pub async fn create_environment(
     app: tauri::AppHandle,
@@ -208,12 +240,21 @@ pub async fn create_environment(
 }
 
 #[derive(Deserialize)]
+/// Request payload for deleting an environment. delete_project controls whether
+/// the associated project directory should also be removed (subject to safety
+/// checks).
 pub struct DeleteEnvironmentRequest {
     pub name: String,
     #[serde(rename = "deleteProject")]
     pub delete_project: bool,
 }
 
+/// Resolve a probable host project path for the named environment using a
+/// sequence of heuristics (findmnt, podman inspect, /var.home mapping, and an
+/// inferred $HOME-based path).
+///
+/// Why: this central helper encapsulates platform-specific heuristics so other
+/// commands can reuse a single, testable implementation.
 pub fn resolve_host_project_path(env_name: &str) -> Option<String> {
     let home_out = build_host_command("distrobox")
         .args([
@@ -287,6 +328,18 @@ pub fn resolve_host_project_path(env_name: &str) -> Option<String> {
 }
 
 #[tauri::command]
+/// Ensure the named environment is started by invoking a no-op command inside
+/// the container (distrobox enter ... true).
+///
+/// Why: this is a lightweight start operation that verifies the container
+/// runtime can enter the environment without performing additional side
+/// effects. Errors are returned with diagnostic output from the distrobox
+/// invocation.
+///
+/// # Errors
+/// Returns Err when the environment name is empty or when the distrobox
+/// invocation fails.
+#[tauri::command]
 pub fn start_environment(app: tauri::AppHandle, name: String) -> Result<String, String> {
     let env_name = name.trim();
     if env_name.is_empty() {
@@ -333,6 +386,15 @@ pub fn start_environment(app: tauri::AppHandle, name: String) -> Result<String, 
 }
 
 #[tauri::command]
+/// Stop the named environment using `distrobox stop --yes`.
+///
+/// Why: exposes a controlled stop operation that surfaces CLI error output
+/// back to the caller and logs failures for diagnostics.
+///
+/// # Errors
+/// Returns Err when the environment name is empty or when the distrobox stop
+/// command fails.
+#[tauri::command]
 pub fn stop_environment(app: tauri::AppHandle, name: String) -> Result<String, String> {
     let env_name = name.trim();
     if env_name.is_empty() {
@@ -378,6 +440,21 @@ pub fn stop_environment(app: tauri::AppHandle, name: String) -> Result<String, S
     Ok(msg)
 }
 
+#[tauri::command]
+/// Delete an environment and optionally its associated host project folder.
+///
+/// Architectural intent / Why:
+/// - The command removes the distrobox environment and then attempts to clean
+///   up orphaned podman containers that VS Code may have created for Dev
+///   Containers. These cleanup steps are best-effort and do not make deletion
+///   fail to avoid leaving users in inconsistent states.
+/// - When deleting a project folder, conservative safety checks prevent
+///   accidental deletion of user home directories.
+///
+/// # Errors
+/// Returns Err when the initial `distrobox rm` fails or when the provided name
+/// is empty. Other cleanup failures are logged and returned as informational
+/// strings appended to the success message.
 #[tauri::command]
 pub async fn delete_environment(
     app: tauri::AppHandle,
@@ -519,6 +596,15 @@ pub async fn delete_environment(
 }
 
 #[tauri::command]
+/// Read the on-disk EnvironmentManifest for a given project path.
+///
+/// Why: reading a small, predictable manifest avoids expensive project
+/// introspection and provides a stable contract for other commands that need
+/// to mutate or query per-project metadata.
+///
+/// # Errors
+/// Returns Err when the manifest cannot be read or parsed.
+#[tauri::command]
 pub fn get_environment_manifest(project_path: String) -> Result<EnvironmentManifest, String> {
     use std::fs;
     let manifest_path = std::path::Path::new(&project_path).join(".bazzite-architect.json");
@@ -539,6 +625,18 @@ pub fn get_environment_manifest(project_path: String) -> Result<EnvironmentManif
     Ok(manifest)
 }
 
+#[tauri::command]
+/// Add a system package to the project's manifest and attempt to install it
+/// inside the running environment.
+///
+/// Why: this operation updates the durable manifest to record requested system
+/// packages and updates the devcontainer.json so future DevContainer runs will
+/// include the same install command. It also attempts the install immediately
+/// inside the container to provide fast feedback.
+///
+/// # Errors
+/// Returns Err if manifest or devcontainer.json cannot be read/parsed/written,
+/// or if the in-container installation fails.
 #[tauri::command]
 pub async fn install_system_package(
     name: String,

@@ -117,12 +117,24 @@ mvn -v || true
     }
 }
 
+/// Represents the semantic level of a progress update emitted during environment
+/// creation.
+///
+/// Why: callers (UI and logging) need a compact, serializable indicator of whether a
+/// progress message is informational or an error so that the frontend can decide how
+/// to render and whether to interrupt workflows. Keeping this small avoids coupling
+/// progress transport to presentation details.
 #[derive(Debug, Clone)]
 pub enum ProgressKind {
     Info,
     Error,
 }
 
+/// A progress event produced while creating an environment.
+///
+/// Why: progress updates carry a stable stage identifier and a human message. The
+/// stage is &'static so producers can reuse constant stage labels without
+/// allocating, simplifying lifecycle handling and event filtering in the UI.
 #[derive(Debug, Clone)]
 pub struct ProgressUpdate {
     pub stage: &'static str,
@@ -130,12 +142,24 @@ pub struct ProgressUpdate {
     pub kind: ProgressKind,
 }
 
+/// Parameters required to create a development environment.
+///
+/// Why: the parameters intentionally capture only immutable, serializable values
+/// (strings and an optional path). Any path normalization and validation is done
+/// inside create_environment to centralize safety checks and avoid leaking
+/// platform-specific behavior to callers.
 pub struct CreateEnvironmentParams {
     pub name: String,
     pub template: String,
     pub home_mount: Option<String>,
 }
 
+/// Result produced after a successful environment creation.
+///
+/// Why: the result contains a human-facing message and structured metadata used
+/// by the frontend to display created artifacts and the actual home mount used.
+/// Returning created file paths allows the UI to show what was scaffolded without
+/// re-scanning the filesystem.
 pub struct CreateEnvironmentResult {
     pub message: String,
     pub created_files: Vec<String>,
@@ -143,6 +167,12 @@ pub struct CreateEnvironmentResult {
     pub chosen_home: Option<String>,
 }
 
+/// On-disk manifest describing a scaffolded environment within a project
+/// directory (.bazzite-architect.json).
+///
+/// Why: persisting a small manifest enables idempotent operations (e.g. adding
+/// system packages) and allows the frontend to inspect environment metadata
+/// without re-parsing project files.
 #[derive(Serialize, Deserialize)]
 pub struct EnvironmentManifest {
     pub version: String,
@@ -151,6 +181,27 @@ pub struct EnvironmentManifest {
     pub system_packages: Vec<String>,
 }
 
+/// Create and initialize a development environment according to the provided
+/// parameters, emitting progress updates via the supplied callback.
+///
+/// Architectural intent / Why:
+/// - Runs external tools (distrobox/podman) asynchronously to avoid blocking the
+///   caller runtime. CPU/text-heavy work is executed on the async runtime where
+///   appropriate and filesystem I/O uses non-blocking primitives when available.
+/// - Emits structured progress events so the UI can remain responsive and reflect
+///   long-running steps (create, enter, scaffold). This decouples creation logic
+///   from presentation.
+/// - Validates and normalizes user-provided paths and enforces safety guards
+///   (absolute paths, directory checks) before performing destructive actions.
+/// - Avoids capturing the progress closure across async boundaries; callers get
+///   immediate events through the provided FnMut during the operation.
+///
+/// # Errors
+/// Returns Err(String) for any operational failure, including but not limited to:
+/// - Unknown template name.
+/// - Failure to read or normalize HOME when needed.
+/// - External command execution failures (distrobox create/enter/setup).
+/// - Filesystem errors while scaffolding or writing the environment manifest.
 pub async fn create_environment(
     params: CreateEnvironmentParams,
     mut progress: impl FnMut(ProgressUpdate) + Send,
