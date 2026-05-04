@@ -51,6 +51,14 @@ If you are coming from a traditional OS (like Ubuntu or Windows), the concept of
 
 When you need a new system package (like a compiler or a specific library), you simply select it in the app's interface. The application automatically runs the necessary terminal commands in the background to install it in your host terminal and syncs it to your IDE environment at the same time.
 
+### 3. Stop Fiddling with the Terminal: Your Control Center
+Instead of googling cryptic commands or digging through config files, you manage your entire setup through a clean interface. Bazzite Architect handles the annoying parts of container management completely in the background.
+
+- Click instead of Type: Start, stop, and manage your containers directly in the app without ever having to memorize a Podman or Distrobox command.
+- Ready-to-code in 60 Seconds: With currently 5 pre-configured project setups, you’re ready to go in just three clicks, perfect for beginners who just want to get to work.
+- Technical Hurdles Solved: The tool safely handles tricky tasks like relocating your Podman storage (GraphRoot), which is a common point of failure on immutable systems.
+- Everything in Sync: It acts as the bridge that automatically keeps your Distrobox and DevContainers in sync, so your tools work identically everywhere.
+
 ---
 
 ## Key Technical Features
