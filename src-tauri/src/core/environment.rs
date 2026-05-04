@@ -115,16 +115,14 @@ mvn -v || true
         }),
         "csharp" => Ok(EnvironmentTemplate {
             image: "mcr.microsoft.com/dotnet/sdk:8.0",
-            packages: &[
-                "git",
-                "curl",
-                "wget",
-                "which",
-                "procps-ng",
-                "findutils",
-            ],
+            // Keep additional distrobox create packages empty for the Debian-based
+            // Microsoft images to avoid invoking Fedora's --additional-packages
+            // behavior which expects dnf. System packages for this template are
+            // installed via apt when requested (see install_system_package).
+            packages: &[],
             init_snippet: r#"
 set -e
+# Verify dotnet is available; avoid running distro package managers here.
 dotnet --info || true
 "#,
         }),
