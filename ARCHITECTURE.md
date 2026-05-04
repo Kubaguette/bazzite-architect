@@ -217,7 +217,7 @@ The following top-down flowchart shows the orchestration when the user selects a
 flowchart TD
   A["UI: Install package 'pkg'"] --> B[Validate request]
   B --> C[Write manifest: add pkg to system_packages]
-  C --> D["distrobox enter <env> -- sudo dnf install -y pkg"]
+  C --> D["distrobox enter <env> -- sudo <pm> install -y pkg (pm detected dynamically)"]
   D --> E["Update .devcontainer/devcontainer.json: append 'sudo dnf install -y pkg' to postCreateCommand"]
   E --> F[Install will apply on next DevContainer rebuild]
   F --> G[Return success or detailed error to UI]
@@ -458,8 +458,8 @@ This chapter outlines how failures are detected and surfaced, and how the backen
   - Write failures: install_system_package aborts with a clear error if it cannot serialize or write the updated manifest.
 - DevContainer configuration errors:
   - Reading/parsing/writing .devcontainer/devcontainer.json is validated in install_system_package. Any failure aborts before the live install step and returns the error as-is.
-- Live package install failures (dnf):
-  - After updating manifest and devcontainer.json, the backend runs sudo dnf install -y <pkg> inside the Distrobox. If that step fails, an error is returned: "Installation in the container failed: …". There is no rollback of the already-written manifest/devcontainer changes (as documented in Chapter 5).
+- Live package install failures (package manager):
+  - After updating manifest and devcontainer.json, the backend probes the container to detect the available package manager (for example: apt, dnf, apk, pacman) and runs the appropriate install command (e.g. `sudo apt-get install -y`, `sudo dnf install -y`). If that step fails, an error is returned: "Installation in the container failed: …". There is no rollback of the already-written manifest/devcontainer changes (as documented in Chapter 5).
 - Podman/Distrobox unavailable or failing:
   - Most operations map OS/CLI failures to human-readable strings, e.g., "Failed to execute 'distrobox …'". Examples: list_environments, start_environment, stop_environment, delete_environment.
   - system_check returns podman_ok/distrobox_ok booleans (plus versions if available) so the UI can short-circuit flows when the system is not ready.
