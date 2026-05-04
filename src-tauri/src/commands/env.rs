@@ -688,25 +688,55 @@ pub async fn install_system_package(
         )
     })?;
 
-    let append = format!(" && sudo dnf install -y {}", package);
-    match dev_val.get_mut("postCreateCommand") {
-        Some(v) => {
-            if let Some(s) = v.as_str() {
-                let mut s_owned = s.to_string();
-                s_owned.push_str(&append);
-                *v = serde_json::Value::String(s_owned);
-            } else {
-                *v = serde_json::Value::String(format!("sudo dnf install -y {}", package));
+    // Choose package manager based on template stack. Debian-based images (e.g. the
+    // official Microsoft .NET SDK image) require apt-get while the default Fedora
+    // images in other templates use dnf. We update devcontainer.json accordingly and
+    // attempt a live install inside the distrobox using the correct toolchain.
+    let uses_apt = manifest.stack == "csharp";
+    if uses_apt {
+        let append = format!(" && sudo apt-get update && sudo apt-get install -y {}", package);
+        match dev_val.get_mut("postCreateCommand") {
+            Some(v) => {
+                if let Some(s) = v.as_str() {
+                    let mut s_owned = s.to_string();
+                    s_owned.push_str(&append);
+                    *v = serde_json::Value::String(s_owned);
+                } else {
+                    *v = serde_json::Value::String(format!("sudo apt-get update && sudo apt-get install -y {}", package));
+                }
+            }
+            None => {
+                if let Some(obj) = dev_val.as_object_mut() {
+                    obj.insert(
+                        "postCreateCommand".to_string(),
+                        serde_json::Value::String(format!("sudo apt-get update && sudo apt-get install -y {}", package)),
+                    );
+                } else {
+                    return Err("devcontainer.json does not have an object root".to_string());
+                }
             }
         }
-        None => {
-            if let Some(obj) = dev_val.as_object_mut() {
-                obj.insert(
-                    "postCreateCommand".to_string(),
-                    serde_json::Value::String(format!("sudo dnf install -y {}", package)),
-                );
-            } else {
-                return Err("devcontainer.json does not have an object root".to_string());
+    } else {
+        let append = format!(" && sudo dnf install -y {}", package);
+        match dev_val.get_mut("postCreateCommand") {
+            Some(v) => {
+                if let Some(s) = v.as_str() {
+                    let mut s_owned = s.to_string();
+                    s_owned.push_str(&append);
+                    *v = serde_json::Value::String(s_owned);
+                } else {
+                    *v = serde_json::Value::String(format!("sudo dnf install -y {}", package));
+                }
+            }
+            None => {
+                if let Some(obj) = dev_val.as_object_mut() {
+                    obj.insert(
+                        "postCreateCommand".to_string(),
+                        serde_json::Value::String(format!("sudo dnf install -y {}", package)),
+                    );
+                } else {
+                    return Err("devcontainer.json does not have an object root".to_string());
+                }
             }
         }
     }
@@ -721,12 +751,22 @@ pub async fn install_system_package(
         )
     })?;
 
-    let output = build_host_command("distrobox")
-        .args([
-            "enter", &name, "--", "sudo", "dnf", "install", "-y", &package,
-        ])
-        .output()
-        .map_err(|e| format!("Failed to execute 'distrobox enter': {}", e))?;
+    // Attempt live installation inside the distrobox. For apt based containers we
+    // need to run update before install; run via a shell so we can combine commands.
+    let output = if uses_apt {
+        let cmd = format!("sudo apt-get update && sudo apt-get install -y {}", package);
+        build_host_command("distrobox")
+            .args(["enter", &name, "--", "bash", "-lc", &cmd])
+            .output()
+            .map_err(|e| format!("Failed to execute 'distrobox enter': {}", e))?
+    } else {
+        build_host_command("distrobox")
+            .args([
+                "enter", &name, "--", "sudo", "dnf", "install", "-y", &package,
+            ])
+            .output()
+            .map_err(|e| format!("Failed to execute 'distrobox enter': {}", e))?
+    };
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
