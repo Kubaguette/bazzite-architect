@@ -36,6 +36,7 @@ export default function DashboardPage() {
       cpp: "CPP_Project",
       rust: "Rust_Project",
       java: "Java_Project",
+      csharp: "CSharp_Project",
     };
     const suggestedName = nameMap[t];
     const home = `$HOME/BazziteArchitect/Projects/${suggestedName}`; // will be expanded by the backend

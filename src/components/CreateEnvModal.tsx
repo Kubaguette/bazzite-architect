@@ -31,7 +31,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useBusy } from "../context/BusyContext";
 
-export type TemplateId = "react-ts" | "python" | "cpp" | "rust" | "java";
+export type TemplateId = "react-ts" | "python" | "cpp" | "rust" | "java" | "csharp";
 
 interface Props {
   onClose: () => void;
@@ -222,6 +222,10 @@ export default function CreateEnvModal({ onClose, onCreated, defaultTemplate, de
               <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <input type="radio" name="template" value="rust" checked={template === "rust"} onChange={() => setTemplate("rust")} data-tauri-drag-region="none" disabled={submitting} />
                 <span>Rust</span>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input type="radio" name="template" value="csharp" checked={template === "csharp"} onChange={() => setTemplate("csharp")} data-tauri-drag-region="none" disabled={submitting} />
+                <span>C#</span>
               </label>
               <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <input type="radio" name="template" value="java" checked={template === "java"} onChange={() => setTemplate("java")} data-tauri-drag-region="none" disabled={submitting} />

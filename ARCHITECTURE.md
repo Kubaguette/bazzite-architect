@@ -111,7 +111,9 @@ To eliminate boilerplate configuration, Bazzite Architect provides an automated 
 * Generates `.devcontainer/devcontainer.json` with a Fedora-based image and, where applicable, a `postCreateCommand` (e.g., `dnf install ...`) and recommended extensions.
 * Initializes the `.bazzite-architect.json` manifest (MVP tracks `system_packages`).
 
-Note: The orchestrator now guarantees minimal baseline toolchain/project files are created during scaffolding (for example: `requirements.txt` for Python, `package.json` for Node/React, `Cargo.toml` for Rust, `CMakeLists.txt` for C/C++, and `pom.xml` for Java). This prevents DevContainer `postCreateCommand` steps from failing on initial open due to missing files.
+Note: The orchestrator now guarantees minimal baseline toolchain/project files are created during scaffolding (for example: `requirements.txt` for Python, `package.json` for Node/React, `Cargo.toml` for Rust, `CMakeLists.txt` for C/C++, `pom.xml` for Java, and `*.csproj` for C#). This prevents DevContainer `postCreateCommand` steps from failing on initial open due to missing files.
+
+C# / .NET: The new C# template scaffolds a minimal Program.cs and a project file targeting .NET 8.0. The generated DevContainer and the Distrobox environment use the official .NET SDK image (`mcr.microsoft.com/dotnet/sdk:8.0`) and recommend the VS Code extensions `ms-dotnettools.csharp` and `ms-dotnettools.csdevkit`. The DevContainer is configured to run a lightweight `dotnet restore || true` in its start hook to fetch NuGet packages without blocking the editor attach sequence.
 
 From there, opening VS Code is a separate action invoked from the app. The result is a ready-to-use, containerized IDE setup with zero manual JSON editing required.
 

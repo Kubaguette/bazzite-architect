@@ -55,7 +55,7 @@ When you need a new system package (like a compiler or a specific library), you 
 Instead of googling cryptic commands or digging through config files, you manage your entire setup through a clean interface. Bazzite Architect handles the annoying parts of container management completely in the background.
 
 - Click instead of Type: Start, stop, and manage your containers directly in the app without ever having to memorize a Podman or Distrobox command.
-- Ready-to-code in 60 Seconds: With currently 5 pre-configured project setups, you’re ready to go in just three clicks, perfect for beginners who just want to get to work.
+- Ready-to-code in 60 Seconds: With currently 6 pre-configured project setups, you’re ready to go in just three clicks, perfect for beginners who just want to get to work.
 - Technical Hurdles Solved: The tool safely handles tricky tasks like relocating your Podman storage (GraphRoot), which is a common point of failure on immutable systems.
 - Everything in Sync: It acts as the bridge that automatically keeps your Distrobox and DevContainers in sync, so your tools work identically everywhere.
 
@@ -79,6 +79,7 @@ Bazzite Architect provides scaffolding and DevContainer sync for these ecosystem
 - Rust (systems)
 - Java (backend)
 - C / C++ (native & embedded)
+- C# (.NET, backend & desktop)
 
 Each environment includes a starter manifest and suggested VS Code extensions. 
 

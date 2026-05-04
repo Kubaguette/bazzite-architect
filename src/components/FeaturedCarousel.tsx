@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import CPP_Banner from "../assets/CPP_Banner.png";
 import JSTS_Banner from "../assets/JSTS_Banner.png";
 import Java_Banner from "../assets/Java_Banner.png";
+import CSharp_Banner from "../assets/CSharp_Banner.png";
 import Python_Banner from "../assets/Python_Banner.png";
 import Rust_Banner from "../assets/Rust_Banner.png";
 
@@ -31,6 +32,7 @@ const stacks = [
   { key: "python", img: Python_Banner, alt: "Python Stack" },
   { key: "cpp", img: CPP_Banner, alt: "C++ Stack" },
   { key: "rust", img: Rust_Banner, alt: "Rust Stack" },
+  { key: "csharp", img: CSharp_Banner, alt: "C# Stack" },
   { key: "java", img: Java_Banner, alt: "Java Stack" },
 ];
 
