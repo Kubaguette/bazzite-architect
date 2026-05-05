@@ -48,7 +48,7 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
         <header id="about-title">About Bazzite Architect</header>
         <div className="body">
           <p>Bazzite Architect – Portable Dev Environments.</p>
-          <p>Version: 1.1.0</p>
+          <p>Version: 1.2.0</p>
           <p>License & contributors are listed in the project repository.</p>
         </div>
         <div className="footer">

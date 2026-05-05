@@ -142,15 +142,15 @@ Bazzite Architect is distributed as native packages (.deb and .rpm). Download th
 - Debian/Ubuntu (.deb):
 
 ```sh
-sudo apt install ./Bazzite-Architect_1.1.0_amd64.deb
+sudo apt install ./Bazzite-Architect_1.2.0_amd64.deb
 ```
 
-(Or using dpkg: `sudo dpkg -i Bazzite-Architect_1.1.0_amd64.deb && sudo apt-get install -f`)
+(Or using dpkg: `sudo dpkg -i Bazzite-Architect_1.2.0_amd64.deb && sudo apt-get install -f`)
 
 - Fedora/RHEL (.rpm):
 
 ```sh
-sudo dnf install ./Bazzite-Architect-1.1.0.x86_64.rpm
+sudo dnf install ./Bazzite-Architect-1.2.0.x86_64.rpm
 ```
 
 *Note: Make sure Podman and Distrobox are available on your system (standard on Bazzite).*

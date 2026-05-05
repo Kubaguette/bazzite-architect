@@ -656,6 +656,6 @@ While not strictly part of the core application binary, the continuous integrati
 
 - Continuous Integration (CI): All Pull Requests targeting the main branch are gated by a mandatory ci-build job. This job provisions an Ubuntu runner with the required GTK/WebKit dependencies and executes both frontend builds (npm run build) and backend validation (cargo check). Code cannot be merged unless this pipeline passes, ensuring the main branch remains permanently stable.
 
-- Continuous Deployment (CD): The project utilizes a tag-driven release architecture. Pushing a semantic version tag (e.g., v1.1.0) triggers a dedicated release job. Using tauri-action, the pipeline automatically compiles the native Linux binaries and bundles them into distributable packages (.deb and .rpm), publishing them directly as a GitHub Release draft.
+- Continuous Deployment (CD): The project utilizes a tag-driven release architecture. Pushing a semantic version tag (e.g., v1.2.0) triggers a dedicated release job. Using tauri-action, the pipeline automatically compiles the native Linux binaries and bundles them into distributable packages (.deb and .rpm), publishing them directly as a GitHub Release draft.
 
 - Infrastructure as Code: The pipeline logic is declared in .github/workflows/release.yml, maintaining our philosophy that all system behavior should be codified and reproducible.
