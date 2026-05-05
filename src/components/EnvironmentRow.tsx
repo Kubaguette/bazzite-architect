@@ -190,6 +190,20 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
     setManageOpen(true);
   }, [resolvedPath, env.name]);
 
+  const handleOpenTerminal = useCallback(async () => {
+    toast.info("Opening terminal…");
+    await invoke("client_log", { source: "ui", level: "INFO", message: `open_in_terminal requested for '${env.name}'` }).catch(() => {});
+    try {
+      const backendMsg = await invoke<string>("open_in_terminal", { envName: env.name });
+      toast.success("Terminal launched");
+      await invoke("client_log", { source: "ui", level: "INFO", message: `open_in_terminal ok for '${env.name}': ${backendMsg}` }).catch(() => {});
+    } catch (e) {
+      const msg = toErrMsg(e);
+      await invoke("client_log", { source: "ui", level: "ERROR", message: `open_in_terminal failed for '${env.name}': ${msg}` }).catch(() => {});
+      toast.error(msg || "Open terminal failed");
+    }
+  }, [env.name]);
+
   return (
     <div ref={containerRef} style={{
       position: "relative",
@@ -320,6 +334,9 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
         <button onClick={() => onOpenVSCode(env.name)} style={{ flex: 1 }}>
           💻 Open in VS Code (remote)
+        </button>
+        <button onClick={handleOpenTerminal} style={{ flex: 1, background: '#444', color: '#e5e7eb', border: 'none', borderRadius: 6, padding: '8px 10px' }}>
+          🖥️ Open in Terminal
         </button>
       </div>
 
