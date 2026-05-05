@@ -682,6 +682,15 @@ While not strictly part of the core application binary, the continuous integrati
 
 - Continuous Integration (CI): All Pull Requests targeting the main branch are gated by a mandatory ci-build job. This job provisions an Ubuntu runner with the required GTK/WebKit dependencies and executes both frontend builds (npm run build) and backend validation (cargo check). Code cannot be merged unless this pipeline passes, ensuring the main branch remains permanently stable.
 
-- Continuous Deployment (CD): The project utilizes a tag-driven release architecture. Pushing a semantic version tag (e.g., v1.2.0) triggers a dedicated release job. Using tauri-action, the pipeline automatically compiles the native Linux binaries and bundles them into distributable packages (.deb and .rpm), publishing them directly as a GitHub Release draft.
+- Continuous Deployment (CD): The project utilizes a tag-driven release architecture. Pushing a semantic version tag (e.g., v1.2.0) triggers a dedicated release job. Using tauri-action, the pipeline automatically compiles the native Linux binaries and bundles them into distributable packages (.deb, .rpm, and AppImage), publishing them directly as a GitHub Release draft.
+
+  AppImage specifics:
+  - AppImage target: The CI builds an AppImage artifact alongside native packages so users can run a portable single-file bundle on many Linux distributions without installation.
+  - BuildRunner: the AppImage is built on a Linux runner (Ubuntu) using the same tauri-action bundle step (target: appimage) or the AppImage toolchain as required by the packaging step.
+  - Artifact naming and metadata: artifacts follow the pattern Bazzite-Architect-<version>-<arch>.<ext> (for example: Bazzite-Architect-1.2.0-x86_64.AppImage). The pipeline generates checksums (SHA256) and signs artifacts (GPG) when signing keys are available in the secrets store.
+  - Release behavior: the workflow attaches the AppImage to the GitHub Release draft in addition to .deb and .rpm. Optionally, the pipeline can create a signed, versioned download URL and publish release notes with the checksum table.
+  - Reproducibility & runners: AppImage builds are best executed on a clean Linux runner; if deterministic builds are a priority, consider using an isolated builder (e.g., a reproducible CI image) and pinning the toolchain versions.
+
+  Note: AppImage generation is opt-in configurable in the workflow so downstream maintainers can disable it if they prefer distribution-specific packages only.
 
 - Infrastructure as Code: The pipeline logic is declared in .github/workflows/release.yml, maintaining our philosophy that all system behavior should be codified and reproducible.
