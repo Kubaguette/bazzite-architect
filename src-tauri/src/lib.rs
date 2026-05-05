@@ -45,6 +45,8 @@ pub fn run() {
             commands::env::get_environment_manifest,
             // VS Code
             commands::vscode::open_in_vscode,
+            // Terminal
+            commands::terminal::open_in_terminal,
             // Space
             commands::space::get_environment_space,
             commands::space::resolve_project_path,
