@@ -6,13 +6,20 @@
  * or clear logs; clearing is performed by invoking the "clear_logs" command.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import PageHeader from "../components/PageHeader";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { toast } from "sonner";
 
 export default function LogsPage() {
   const [raw, setRaw] = useState<string>("");
+
+  const blocks = useMemo(() => {
+    if (!raw) return [] as string[];
+    // Split into blocks separated by one or more blank lines to preserve grouped messages
+    return raw.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  }, [raw]);
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
@@ -53,14 +60,68 @@ export default function LogsPage() {
     }
   };
 
+  const levelFor = (text: string) => {
+    const t = text.toLowerCase();
+    if (t.includes('error') || t.includes('err')) return 'error';
+    if (t.includes('warn')) return 'warn';
+    if (t.includes('success') || t.includes('ok') || t.includes('started') || t.includes('launched')) return 'success';
+    return 'info';
+  };
+
+  const levelStyle = (lvl: string) => {
+    switch (lvl) {
+      case 'error': return { background: 'rgba(254, 226, 226, 0.06)', borderLeft: '4px solid rgba(239,68,68,0.22)', color: '#fee2e2' };
+      case 'warn': return { background: 'rgba(255,245,230,0.04)', borderLeft: '4px solid rgba(250,204,21,0.14)', color: '#fef3c7' };
+      case 'success': return { background: 'rgba(220,252,231,0.03)', borderLeft: '4px solid rgba(34,197,94,0.12)', color: '#bbf7d0' };
+      default: return { background: 'transparent', borderLeft: '4px solid rgba(255,255,255,0.02)', color: '#e5e7eb' };
+    }
+  };
+
+  const base = 12;
+  const golden = Math.round(base * 1.618);
+  const containerMax = 'min(60vh, calc(100vh - 220px))';
+  const sectionGap = Math.round(golden * 0.5); // bring title, actions and log container a bit closer
+
   return (
-    <section>
-      <h1>Logs (Power-User)</h1>
-      <div className="log-actions">
-        <button onClick={copy}>Copy</button>
-        <button onClick={clear}>Clear</button>
+    <section style={{ display: 'flex', flexDirection: 'column', gap: sectionGap }}>
+      <PageHeader title="Logs (Power-User)" />
+
+      <div className="log-actions" style={{ display: 'flex', gap: 8, marginTop: 0 }}>
+        <button onClick={copy} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Copy</button>
+        <button onClick={clear} style={{ background: 'transparent', color: '#e5e7eb', border: '1px solid #374151', padding: '8px 12px', borderRadius: 8 }}>Clear</button>
       </div>
-      <pre className="log-pre">{raw || "No logs yet."}</pre>
+
+      <div style={{
+        maxHeight: containerMax,
+        overflowY: 'auto',
+        padding: 12,
+        borderRadius: 10,
+        border: '1px solid rgba(255,255,255,0.04)',
+        background: '#0f1724',
+        boxShadow: '0 6px 18px rgba(2,6,23,0.6)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: Math.round(golden * 0.6),
+      }}>
+        {blocks.length === 0 ? (
+          <div style={{ color: '#888' }}>No logs yet.</div>
+        ) : (
+          blocks.map((b, i) => {
+            const lvl = levelFor(b);
+            const style = levelStyle(lvl);
+            const lines = b.split('\n');
+            const header = lines[0] ?? '';
+            const rest = lines.slice(1).join('\n');
+            return (
+              <div key={i} style={{ padding: 10, borderRadius: 8, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace', fontSize: 13, whiteSpace: 'pre-wrap', ...style }}>
+                <div style={{ fontWeight: 700, marginBottom: rest ? 6 : 0 }}>{header}</div>
+                {rest ? <div style={{ opacity: 0.95, whiteSpace: 'pre-wrap', fontSize: 13 }}>{rest}</div> : null}
+              </div>
+            );
+          })
+        )}
+      </div>
+
     </section>
   );
 }

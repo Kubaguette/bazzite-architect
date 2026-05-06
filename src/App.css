@@ -65,6 +65,7 @@
 
 :root { /* ensure radius is available everywhere */
   --window-radius: 12px;
+  --primary-blue: #2563eb; /* single source for primary action color */
 }
 
 /* Global reset and window fill */
@@ -219,7 +220,9 @@ html.app-ready, body.app-ready, #root.app-ready {
   align-items: center;
   gap: 8px;
   justify-content: space-between;
+  min-height: 48px; /* ensure consistent title baseline across pages */
 }
+.page-header h1 { margin: 0; line-height: 1; }
 .env-list {
   margin: 0;
   padding: 0;
@@ -331,18 +334,20 @@ html.app-ready, body.app-ready, #root.app-ready {
   width: 100%;
   height: 56px;
   border-radius: var(--window-radius);
-  border: 1px solid #2a2a2a;
-  background: linear-gradient(180deg, #2b2b2b 0%, #262626 100%);
-  color: #e6e6e6;
+  border: none;
+  background: var(--primary-blue); /* primary focus blue */
+  color: #ffffff;
+  box-shadow: 0 8px 22px rgba(37,99,235,0.14), inset 0 -2px 0 rgba(0,0,0,0.12);
   font-weight: 700;
   font-size: 16px;
   letter-spacing: 0.2px;
   padding: 0 16px;
-  margin: 0; /* überschreibt generische Button-Margins */
+  margin: 0; /* override generic Button-Margins */
   cursor: pointer;
 }
 .action-banner-btn:hover {
-  background: linear-gradient(180deg, #333333 0%, #2b2b2b 100%);
+  background: #1f4fcf;
+  box-shadow: 0 10px 28px rgba(37,99,235,0.18), inset 0 -2px 0 rgba(0,0,0,0.12);
 }
 .action-status { align-self: stretch; }
 
@@ -434,6 +439,9 @@ html.app-ready, body.app-ready, #root.app-ready {
   -webkit-appearance: none;
   appearance: none;
 }
+.primary-menu-trigger span { display: inline-block; transition: transform 320ms cubic-bezier(0.2,0.9,0.2,1); }
+/* active/open state for hamburger (subtle rotate/scale for visual feedback) */
+.primary-menu-trigger.open span { transform: rotate(90deg) scale(1.03); }
 .primary-menu-trigger:hover {
   background: rgba(255, 255, 255, 0.06);
 }
@@ -441,6 +449,8 @@ html.app-ready, body.app-ready, #root.app-ready {
   outline: none;
   box-shadow: 0 0 0 2px rgba(53,132,228,0.6);
 }
+
+/* popover container animation */
 .menu-popover {
   position: absolute;
   top: calc(100% + 6px);
@@ -450,17 +460,35 @@ html.app-ready, body.app-ready, #root.app-ready {
   color: #e6e6e6;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 6px;
+  padding: 8px; /* provide breathing room (8px ~ 2 units) */
   box-shadow: 0 12px 28px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.04);
   z-index: 100000; /* above header */
   isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* 8px grid spacing between items */
+  height: fit-content; /* tightly hug content */
+  min-height: 0; /* prevent unexpected growth from flex ancestors */
 }
+.menu-popover.open { animation: pop-in 320ms cubic-bezier(0.2,0.9,0.2,1) both; }
+.menu-popover.closing { animation: pop-out 260ms cubic-bezier(0.4,0,0.2,1) both; }
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes pop-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-6px) scale(0.98); }
+}
+
+/* menu items: animate individually with a slight stagger for a fluid feel */
 .menu-item {
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: center; /* vertical centering of icon + text */
   gap: 8px;
-  padding: 8px 10px;
+  padding: 8px 12px; /* balanced vertical padding */
   border-radius: 8px; /* not flush with popover edges */
   background: transparent;
   border: none;
@@ -468,9 +496,83 @@ html.app-ready, body.app-ready, #root.app-ready {
   text-align: left;
   font: inherit;
   cursor: pointer;
+  line-height: 1; /* avoid line-height shifting content */
+  height: auto; /* let padding determine size */
 }
-.menu-item:hover {
-  background: rgba(255,255,255,0.08);
+
+/* Environment-specific menu: slightly more compact and vertically balanced */
+.env-menu {
+  min-width: 160px;
+  padding: 8px; /* 8px container padding for comfortable breathing room */
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* 8px gap between items */
+  height: fit-content; /* tightly hug its children */
+}
+.env-menu .menu-item {
+  padding: 8px 12px; /* comfortable vertical padding (py-2) */
+  height: auto; /* no forced min height */
+  align-items: center; /* ensure vertical centering */
+  margin: 0; /* remove any stray margins */
+}
+.env-menu .menu-item .text { font-size: 13px; display: inline-flex; align-items: center; }
+.env-menu .menu-divider { margin: 2px 0; height: 1px; background: rgba(255,255,255,0.08); }
+
+/* visual separator / slight grouping for destructive action */
+.env-menu .menu-item:last-child {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: 0; /* rely on container gap (8px) only */
+  padding-top: 8px; /* match other buttons' vertical padding so height is uniform */
+}
+
+/* trigger for env menu */
+.env-menu-trigger span { display: inline-block; transition: transform 320ms cubic-bezier(0.2,0.9,0.2,1); }
+.env-menu-trigger.open span { transform: rotate(90deg) scale(1.03); }
+
+/* primary button utility to keep color consistent */
+.btn-primary {
+  background: var(--primary-blue) !important;
+  color: #ffffff !important;
+  border-radius: 8px;
+  border: none;
+}
+.btn-primary:hover {
+  filter: brightness(0.95);
+}
+
+/* destructive button utility */
+.btn-danger {
+  background: #ef4444 !important; /* red */
+  color: #ffffff !important;
+  border-radius: 8px;
+  border: none;
+}
+.btn-danger:hover { filter: brightness(0.95); }
+
+/* disabled state for menu items rendered as buttons */
+.menu-item[disabled], .menu-item[aria-disabled="true"] {
+  pointer-events: none;
+  cursor: default;
+}
+
+/* Visual disabled styles for primary/danger buttons to clearly indicate unavailable actions */
+.btn-primary[disabled], .btn-primary[aria-disabled="true"] {
+  background: rgba(255,255,255,0.03) !important; /* muted background */
+  color: #9ca3af !important; /* muted text */
+  border: 1px solid rgba(255,255,255,0.04) !important;
+  box-shadow: none !important;
+}
+.btn-danger[disabled], .btn-danger[aria-disabled="true"] {
+  background: rgba(239,68,68,0.08) !important; /* muted red background */
+  color: #fca5a5 !important; /* muted red text */
+  border: 1px solid rgba(239,68,68,0.12) !important;
+  box-shadow: none !important;
+}
+
+/* Keep a subtle opacity fallback for non-button menu items when disabled */
+.menu-item[disabled] .icon, .menu-item[aria-disabled="true"] .icon,
+.menu-item[disabled] .text, .menu-item[aria-disabled="true"] .text {
+  opacity: 0.9;
 }
 .menu-item .icon {
   width: 16px;
@@ -482,9 +584,42 @@ html.app-ready, body.app-ready, #root.app-ready {
 .menu-item .text { flex: 1; }
 .menu-divider {
   height: 1px;
-  margin: 6px;
+  margin: 0;
   background: rgba(255,255,255,0.08);
   border: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.menu-popover.open .menu-item,
+.menu-popover.open .menu-divider {
+  animation: item-pop-in 320ms cubic-bezier(0.2,0.9,0.2,1) both;
+}
+.menu-popover.open .menu-item:nth-child(1) { animation-delay: 80ms; }
+.menu-popover.open .menu-item:nth-child(2) { animation-delay: 120ms; }
+.menu-popover.open .menu-divider          { animation-delay: 160ms; }
+.menu-popover.open .menu-item:nth-child(4) { animation-delay: 200ms; }
+
+.menu-popover.closing .menu-item,
+.menu-popover.closing .menu-divider {
+  animation: item-pop-out 220ms cubic-bezier(0.4,0,0.2,1) both;
+}
+.menu-popover.closing .menu-item:nth-child(1) { animation-delay: 0ms; }
+.menu-popover.closing .menu-item:nth-child(2) { animation-delay: 20ms; }
+.menu-popover.closing .menu-divider          { animation-delay: 40ms; }
+.menu-popover.closing .menu-item:nth-child(4) { animation-delay: 60ms; }
+
+@keyframes item-pop-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes item-pop-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
+}
+
+.menu-item:hover {
+  background: rgba(255,255,255,0.08);
 }
 
 /* Simple modal styling (GNOME-like) */
@@ -569,3 +704,47 @@ html.app-ready, body.app-ready, #root.app-ready {
   cursor: pointer;
 }
 .modal-card .footer button:hover { background: #4a4a4a; }
+
+/* Expanding system check box animations */
+.expanding-box {
+  max-height: 0; /* collapsed */
+  overflow: hidden;
+  opacity: 0;
+  transform-origin: top;
+  transition: max-height 420ms cubic-bezier(0.2,0.9,0.2,1), opacity 280ms ease;
+}
+
+/* Drive card slide-in animation (used by StoragePage) */
+.drive-card {
+  opacity: 0;
+  transform: translateX(-40px);
+  /* ensure the element is in the flow but visually offset */
+}
+.drive-card.enter {
+  animation: drive-slide-in 1400ms cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes drive-slide-in {
+  from { opacity: 0; transform: translateX(-40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.expanding-box.open {
+  max-height: 420px; /* large enough for the status content */
+  opacity: 1;
+  transition: max-height 420ms cubic-bezier(0.2,0.9,0.2,1), opacity 320ms ease 40ms;
+}
+
+/* animate inner status boxes for a smoother entrance */
+.expanding-box .status-box {
+  transform: translateY(-6px);
+  opacity: 0;
+  transition: transform 360ms cubic-bezier(0.2,0.9,0.2,1), opacity 320ms ease;
+}
+.expanding-box.open .status-box {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* when multiple status boxes are present, stagger the animation */
+.expanding-box.open .status-box + .status-box {
+  transition-delay: 60ms;
+}

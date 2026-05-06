@@ -18,7 +18,10 @@ const DOC_URL = "https://github.com/Kubaguette/bazzite-architect/blob/main/ARCHI
 const BUG_URL = "https://github.com/Kubaguette/bazzite-architect/issues";
 
 export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
+  // 'open' represents logical open state; 'mounted' controls DOM presence to allow exit animation
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [closing, setClosing] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   // Close on outside click or Escape
@@ -28,11 +31,12 @@ export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
       const target = e.target as Node | null;
       if (!wrapRef.current) return;
       if (!wrapRef.current.contains(target)) {
-        setOpen(false);
+        // trigger close flow
+        handleClose();
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") handleClose();
     };
     document.addEventListener("mousedown", onDocClick, true);
     document.addEventListener("keydown", onKey, true);
@@ -42,10 +46,33 @@ export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
     };
   }, [open]);
 
-  const onToggle = () => setOpen(v => !v);
+  const MENU_EXIT_MS = 260; // must match CSS pop-out duration
+
+  const onToggle = () => {
+    if (!open) {
+      // opening: ensure mounted then open
+      setMounted(true);
+      setClosing(false);
+      setOpen(true);
+    } else {
+      // closing sequence
+      handleClose();
+    }
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setClosing(true);
+    // leave mounted for exit animation then unmount
+    setTimeout(() => {
+      setClosing(false);
+      setMounted(false);
+    }, MENU_EXIT_MS);
+  };
 
   const onSelect = (what: "docs" | "bug" | "about") => {
-    setOpen(false);
+    // close with animation
+    handleClose();
     if (what === "about") {
       // Trigger global About modal or callback
       if (typeof onAbout === "function") onAbout();
@@ -73,10 +100,12 @@ export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
     }
   };
 
+  const triggerClass = mounted && !closing ? 'primary-menu-trigger open' : 'primary-menu-trigger';
+
   return (
     <div className="primary-menu" ref={wrapRef} data-tauri-drag-region="none">
       <button
-        className="primary-menu-trigger"
+        className={triggerClass}
         aria-label="Primary menu"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -87,8 +116,8 @@ export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
         {/* clean hamburger glyph per spec */}
         <span aria-hidden>☰</span>
       </button>
-      {open && (
-        <div className="menu-popover" role="menu" aria-label="Primary menu" data-tauri-drag-region="none">
+      {mounted && (
+        <div className={`menu-popover ${closing ? 'closing' : 'open'}`} role="menu" aria-label="Primary menu" data-tauri-drag-region="none">
           <button className="menu-item" role="menuitem" onClick={() => onSelect("docs")} data-tauri-drag-region="none">
             <span className="icon" aria-hidden>📖</span>
             <span className="text">Documentation</span>

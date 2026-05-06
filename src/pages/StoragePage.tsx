@@ -16,6 +16,7 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useBusy } from "../context/BusyContext";
 import { toast } from "sonner";
+import PageHeader from "../components/PageHeader";
 
 interface DriveInfo {
   name: string;
@@ -112,11 +113,12 @@ export default function StoragePage() {
 
   return (
     <section>
-      <h1>Storage</h1>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={scanDrives}>Scan drives</button>
-        <button onClick={fetchActiveStorage}>Read active storage location</button>
-      </div>
+      <PageHeader title="Storage" actions={(
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={scanDrives} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}>Scan drives</button>
+          <button onClick={fetchActiveStorage} style={{ background: 'transparent', color: '#e5e7eb', border: '1px solid #374151', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}>Read active storage location</button>
+        </div>
+      )} />
       {activeStoragePath && (
         <p style={{ marginTop: 6 }}>
           Active GraphRoot: <code>{activeStoragePath}</code>
@@ -128,40 +130,50 @@ export default function StoragePage() {
         </div>
       )}
 
-      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 16 }}>
         {drivesList ? (
           drivesList.map((d, i) => (
-            <div key={i} style={{
-              padding: 12,
-              background: "#222",
-              borderRadius: 8,
-              border: "1px solid #444",
+            <div key={i} className={`drive-card enter`} style={{
+              padding: 14,
+              background: "#0f1724",
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.04)",
+              boxShadow: "0 6px 18px rgba(2,6,23,0.6)",
               textAlign: "left",
+              margin: 0,
+              animationDelay: `${i * 350}ms`,
             }}>
-              <strong>📍 {d.mount_point}</strong>
-              <div style={{ fontSize: 12, color: "#aaa" }}>
-                {d.name} ({d.file_system}) – {d.available_gb} GB free of {d.total_gb} GB
-              </div>
-              {isActivePath(d.mount_point, activeStoragePath) ? (
-                <div style={{
-                  marginTop: 8,
-                  padding: 8,
-                  background: "#064e3b",
-                  color: "#34d399",
-                  borderRadius: 6,
-                  border: "1px solid #059669",
-                  textAlign: "center",
-                }}>
-                  ✅ Active Podman storage
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <strong style={{ color: '#ffffff', fontWeight: 600 }}>📍 {d.mount_point}</strong>
+                  <div style={{ fontSize: 12, color: '#e5e7eb', marginTop: 6 }}>
+                    {d.name} ({d.file_system}) – {d.available_gb} GB free of {d.total_gb} GB
+                  </div>
                 </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmTarget(d.mount_point)}
-                  style={{ marginTop: 8, width: "100%" }}
-                >
-                  🚀 Configure storage here
-                </button>
-              )}
+                <div style={{ minWidth: 160 }}>
+                  {isActivePath(d.mount_point, activeStoragePath) ? (
+                    <div style={{
+                      padding: '8px 12px',
+                      background: 'linear-gradient(180deg, rgba(16,185,129,0.06), rgba(6,95,70,0.04))',
+                      color: '#bbf7d0',
+                      borderRadius: 8,
+                      border: '1px solid rgba(16,185,129,0.14)',
+                      textAlign: 'center',
+                      fontWeight: 600,
+                    }}>
+                      ✅ Active Podman storage
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmTarget(d.mount_point)}
+                      style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '10px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      🚀 Configure storage here
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           ))
         ) : (
@@ -170,15 +182,15 @@ export default function StoragePage() {
       </div>
       {confirmTarget && (
         <div className={`modal-backdrop ${confirmClosing ? "closing" : "show"}`}>
-          <div className="modal-card" style={{ maxWidth: 460 }}>
-            <header>Configure storage here?</header>
+          <div className="modal-card" style={{ maxWidth: 520 }}>
+            <header style={{ fontWeight: 700 }}>Configure storage here?</header>
             <div className="body">
-              <p>
+              <p style={{ color: '#e5e7eb' }}>
                 Configure storage location? Existing containers will not be migrated (MVP).
               </p>
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button onClick={() => startConfirm(false)} style={{ flex: 1, background: "#374151" }}>Cancel</button>
-                <button onClick={() => startConfirm(true)} style={{ flex: 1 }}>Confirm</button>
+              <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+                <button onClick={() => startConfirm(false)} style={{ flex: 1, background: "transparent", color: '#e5e7eb', border: '1px solid #374151', padding: '10px 12px', borderRadius: 8 }}>Cancel</button>
+                <button onClick={() => startConfirm(true)} style={{ flex: 1, background: '#ef4444', color: '#fff', border: 'none', padding: '10px 12px', borderRadius: 8 }}>Confirm</button>
               </div>
             </div>
           </div>

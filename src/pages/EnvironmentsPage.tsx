@@ -20,6 +20,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useBusy } from "../context/BusyContext";
 import { useEnvironments } from "../context/EnvironmentsContext";
 import EnvironmentRow from "../components/EnvironmentRow";
+import PageHeader from "../components/PageHeader";
 import { useSpaceCache } from "../context/SpaceCacheContext";
 
 interface EnvironmentSpaceInfo {
@@ -138,12 +139,7 @@ export default function EnvironmentsPage() {
 
   return (
     <section>
-      <header className="page-header">
-        <h1>Environments</h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {envsLoading && <span className="spinner" title="Loading in background" />}
-        </div>
-      </header>
+      <PageHeader title="Environments" actions={envsLoading ? <span className="spinner" title="Loading in background" /> : null} />
 
       {envMsg && (
         <div className="status-box" style={{ marginTop: 10 }}>

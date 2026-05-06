@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import PageHeader from "../components/PageHeader";
 
 interface SystemCheckResult {
   podman_ok: boolean;
@@ -51,39 +52,72 @@ export default function SettingsPage() {
     window.dispatchEvent(new Event("advanced-mode-changed"));
   }, [advanced]);
 
+  // Design notes: follow a loose golden-ratio spacing system (base 12px, then ~20px gaps)
+  const base = 12;
+  const golden = Math.round(base * 1.618);
+
   return (
     <section>
-      <h1>Settings</h1>
+      <PageHeader title="Settings" />
 
-      <fieldset>
-        <legend>System Check</legend>
-        <button onClick={runSystemCheck}>Check</button>
-        {msg && <p className="status-box">{msg}</p>}
-        {system && (
-          <div className="status-box" style={{ textAlign: "left" }}>
-            <p>
-              Podman: {system.podman_ok ? "✅" : "❌"}
-              {system.podman_version ? ` – ${system.podman_version}` : ""}
-            </p>
-            <p>
-              Distrobox: {system.distrobox_ok ? "✅" : "❌"}
-              {system.distrobox_version ? ` – ${system.distrobox_version}` : ""}
-            </p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: golden }}>
+        <div style={{ padding: 16, background: '#0f1724', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', boxShadow: '0 6px 18px rgba(2,6,23,0.6)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div>
+              <div style={{ fontWeight: 700, color: '#ffffff' }}>System Check</div>
+              <div style={{ marginTop: 6, color: '#e5e7eb', fontSize: 13 }}>Validate host tooling required by the app</div>
+            </div>
+            <div>
+              <button
+                onClick={runSystemCheck}
+                className={`system-check-btn ${msg === 'Checking...' || system ? 'active' : ''}`}
+                style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}
+              >
+                Check
+              </button>
+            </div>
           </div>
-        )}
-      </fieldset>
 
-      <fieldset style={{ marginTop: 16 }}>
-        <legend>Advanced</legend>
-        <label>
-          <input
-            type="checkbox"
-            checked={advanced}
-            onChange={(e) => setAdvanced(e.target.checked)}
-          />{" "}
-          Show Advanced Mode (Logs in the sidebar)
-        </label>
-      </fieldset>
+          <div style={{ marginTop: 12 }}>
+            <div className={`expanding-box ${msg || system ? 'open' : ''}`}>
+              {msg ? <div className="status-box" style={{ padding: 10, marginTop: 8 }}>{msg}</div> : null}
+              {system ? (
+                <div className="status-box" style={{ textAlign: 'left', padding: 12, marginTop: msg ? 8 : 6 }}>
+                  <p style={{ margin: 0 }}>
+                    <strong>Podman:</strong> {system.podman_ok ? " ✅" : " ❌"}
+                    {system.podman_version ? ` – ${system.podman_version}` : ""}
+                  </p>
+                  <p style={{ marginTop: 6, marginBottom: 0 }}>
+                    <strong>Distrobox:</strong> {system.distrobox_ok ? " ✅" : " ❌"}
+                    {system.distrobox_version ? ` – ${system.distrobox_version}` : ""}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ padding: 16, background: '#0f1724', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', boxShadow: '0 6px 18px rgba(2,6,23,0.6)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div>
+              <div style={{ fontWeight: 700, color: '#ffffff' }}>Advanced</div>
+              <div style={{ marginTop: 6, color: '#e5e7eb', fontSize: 13 }}>Expose advanced features and developer controls</div>
+            </div>
+            <div style={{ minWidth: 140, textAlign: 'right' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={advanced}
+                  onChange={(e) => setAdvanced(e.target.checked)}
+                  style={{ width: 18, height: 18 }}
+                />
+                <span style={{ color: '#e5e7eb' }}>Show</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </section>
   );
 }
