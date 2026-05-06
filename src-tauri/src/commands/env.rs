@@ -619,6 +619,345 @@ pub fn get_environment_manifest(project_path: String) -> Result<EnvironmentManif
     Ok(manifest)
 }
 
+
+/// Detect packages installed inside the running environment that are not recorded
+/// in the project's manifest (drift) and packages declared in the
+/// .devcontainer/devcontainer.json that are not recorded in the manifest.
+///
+/// Returns an object with two arrays:
+/// - new_in_container: packages found in Distrobox but missing from manifest
+/// - new_in_devcontainer: packages found in devcontainer.json install commands but missing from manifest
+#[derive(Serialize)]
+pub struct DriftScanResult {
+    pub new_in_container: Vec<String>,
+    pub new_in_devcontainer: Vec<String>,
+    pub baseline_missing: bool,
+    pub fallback_used: bool,
+}
+
+fn normalize_pkg_name(s: &str) -> String {
+    let mut t = s.trim().trim_matches(|c: char| c == ',' || c == '"' || c == '\'');
+    // remove leading epoch like "1:pkg"
+    if let Some(colon) = t.find(':') {
+        if t[..colon].chars().all(|c| c.is_ascii_digit()) {
+            t = &t[colon + 1..];
+        }
+    }
+    // remove trailing :arch (dpkg style) e.g. pkg:amd64 -> pkg
+    if let Some(colon) = t.rfind(':') {
+        if colon + 1 < t.len() && t[colon + 1..].chars().all(|c| c.is_ascii_alphanumeric()) {
+            t = &t[..colon];
+        }
+    }
+    // remove .arch suffix (rpm style)
+    if let Some(dot) = t.rfind('.') {
+        let suffix = &t[dot + 1..];
+        let arches = ["x86_64", "noarch", "i686", "aarch64", "armv7hl", "ppc64le"];
+        if arches.contains(&suffix) {
+            t = &t[..dot];
+        }
+    }
+    // remove trailing version if it looks like -<digit>
+    if let Some(dash) = t.rfind('-') {
+        let after = &t[dash + 1..];
+        if after.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+            t = &t[..dash];
+        }
+    }
+    t.to_lowercase()
+}
+
+#[tauri::command]
+pub async fn detect_environment_drift(
+    name: String,
+    project_path: String,
+) -> Result<DriftScanResult, String> {
+    use std::fs;
+    use std::collections::HashSet;
+
+    let manifest_path = std::path::Path::new(&project_path).join(".bazzite-architect.json");
+    let manifest_content = fs::read_to_string(&manifest_path).map_err(|e| {
+        format!("Failed to read manifest ({}): {}", manifest_path.display(), e)
+    })?;
+    let manifest: EnvironmentManifest = serde_json::from_str(&manifest_content).map_err(|e| {
+        format!("Failed to parse manifest ({}): {}", manifest_path.display(), e)
+    })?;
+
+    let declared: HashSet<String> = manifest.system_packages.into_iter().map(|s| normalize_pkg_name(&s)).collect();
+
+    // --------- Container -> Manifest (existing) ---------
+    // Probe package manager inside the container
+    let probe = r#"if command -v apt-get >/dev/null 2>&1; then echo apt; \
+elif command -v dnf >/dev/null 2>&1; then echo dnf; \
+elif command -v apk >/dev/null 2>&1; then echo apk; \
+elif command -v pacman >/dev/null 2>&1; then echo pacman; \
+else echo unknown; fi"#;
+    let probe_out = build_host_command("distrobox")
+        .args(["enter", &name, "--", "sh", "-lc", probe])
+        .output()
+        .map_err(|e| format!("Failed to execute 'distrobox enter' for package-manager probe: {}", e))?;
+
+    let pm = String::from_utf8_lossy(&probe_out.stdout).trim().to_string();
+    if pm == "unknown" || pm.is_empty() {
+        let stderr = String::from_utf8_lossy(&probe_out.stderr).trim().to_string();
+        return Err(format!("Could not detect package manager inside container: {}", stderr));
+    }
+
+    // Preferred and fallback listing commands for current installed packages (user-installed where possible)
+    let (primary_cmd, fallback_cmd): (&str, Option<&str>) = match pm.as_str() {
+        "apt" => ("apt-mark showmanual", Some("dpkg-query -f '${binary:Package}\\n' -W")),
+        "dnf" => ("dnf repoquery --userinstalled --qf '%{name}\\n'", Some("rpm -qa --queryformat '%{NAME}\\n'")),
+        "apk" => ("apk info", None),
+        "pacman" => ("pacman -Qqe", Some("pacman -Qq")),
+        _ => ("rpm -qa --queryformat '%{NAME}\\n'", None),
+    };
+
+    let mut current_set: HashSet<String> = HashSet::new();
+    let mut list_output = String::new();
+    let mut used_fallback = false;
+
+    let mut primary_exec = build_host_command_async("distrobox");
+    primary_exec.args(["enter", &name, "--", "sh", "-lc", primary_cmd]);
+    if let Ok(po) = primary_exec.output().await {
+        if po.status.success() {
+            list_output = String::from_utf8_lossy(&po.stdout).to_string();
+        }
+    }
+
+    if list_output.trim().is_empty() {
+        if let Some(fb) = fallback_cmd {
+            let mut fb_exec = build_host_command_async("distrobox");
+            fb_exec.args(["enter", &name, "--", "sh", "-lc", fb]);
+            if let Ok(fo) = fb_exec.output().await {
+                if fo.status.success() {
+                    list_output = String::from_utf8_lossy(&fo.stdout).to_string();
+                    used_fallback = true;
+                }
+            }
+        }
+    }
+
+    if used_fallback {
+        eprintln!("Warning: primary package-listing command failed or returned empty; used fallback for PM='{}'.", pm);
+    }
+
+    if list_output.trim().is_empty() {
+        eprintln!("detect_environment_drift: no package list could be retrieved");
+    } else {
+        for line in list_output.lines() {
+            let ln = line.trim();
+            if ln.is_empty() { continue; }
+            for tok in ln.split_whitespace() {
+                let norm = normalize_pkg_name(tok);
+                if !norm.is_empty() { current_set.insert(norm); }
+            }
+        }
+    }
+
+    // use current_set below by renaming user_installed -> current_set
+
+    // Use baseline diffing: retrieve the baseline snapshot from ~/.bazzite/base_packages.txt
+    // and compute (current_packages - baseline_packages) to find packages added since creation.
+    let mut new_in_container: Vec<String> = Vec::new();
+
+    // Read baseline file if present (but do not error if missing)
+    let mut baseline_missing = false;
+    let mut baseline_set: HashSet<String> = HashSet::new();
+    let mut cat_cmd = build_host_command_async("distrobox");
+    cat_cmd.args(["enter", &name, "--", "sh", "-lc", "cat ~/.bazzite/base_packages.txt"]);
+    match cat_cmd.output().await {
+        Ok(cat_out) => {
+            if cat_out.status.success() {
+                let baseline_s = String::from_utf8_lossy(&cat_out.stdout).to_string();
+                for line in baseline_s.lines() {
+                    let ln = line.trim();
+                    if ln.is_empty() { continue; }
+                    let norm = normalize_pkg_name(ln);
+                    if !norm.is_empty() { baseline_set.insert(norm); }
+                }
+            } else {
+                baseline_missing = true;
+            }
+        }
+        Err(_) => {
+            baseline_missing = true;
+        }
+    }
+
+    // Compute added = current - baseline
+    let mut added: HashSet<String> = HashSet::new();
+    for cur in current_set.into_iter() {
+        if !baseline_set.contains(&cur) {
+            added.insert(cur);
+        }
+    }
+
+    // Filter out packages already declared in manifest
+    new_in_container = added.into_iter().filter(|p| !declared.contains(p)).collect();
+    new_in_container.sort();
+
+    // --------- DevContainer -> Manifest (parse devcontainer.json) ---------
+    let mut new_in_devcontainer: Vec<String> = Vec::new();
+    let devcontainer_path = std::path::Path::new(&project_path).join(".devcontainer").join("devcontainer.json");
+    if devcontainer_path.exists() {
+        if let Ok(s) = fs::read_to_string(&devcontainer_path) {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&s) {
+                // collect postCreateCommand and postStartCommand if present
+                let mut commands: Vec<String> = Vec::new();
+                if let Some(pc) = val.get("postCreateCommand") {
+                    if let Some(st) = pc.as_str() {
+                        commands.push(st.to_string());
+                    }
+                }
+                if let Some(ps) = val.get("postStartCommand") {
+                    if let Some(st) = ps.as_str() {
+                        commands.push(st.to_string());
+                    }
+                }
+
+                // helper to extract package tokens from a command string
+                fn extract_pkgs_from_cmd(cmd: &str) -> Vec<String> {
+                    let mut out: Vec<String> = Vec::new();
+                    let patterns = ["dnf install", "apt-get install", "apt install", "apk add", "pacman -S", "pacman -Sy", "pacman -S --noconfirm"];
+                    for pat in patterns.iter() {
+                        let mut start = 0usize;
+                        while let Some(idx) = cmd[start..].to_lowercase().find(&pat.to_lowercase()) {
+                            let abs = start + idx + pat.len();
+                            // take substring from abs to next && or ; or end
+                            let rest = &cmd[abs..];
+                            let end_idx = rest.find("&&").or_else(|| rest.find(";")).unwrap_or(rest.len());
+                            let segment = &rest[..end_idx];
+                            // split by whitespace and filter tokens
+                            for tok in segment.split_whitespace() {
+                                let t = tok.trim().trim_matches('"').trim_matches('\'');
+                                if t.is_empty() { continue; }
+                                // skip flags
+                                if t.starts_with('-') { continue; }
+                                if t.eq_ignore_ascii_case("sudo") || t.eq_ignore_ascii_case("-y") { continue; }
+                                // basic validation: allow alnum and common pkg chars
+                                if t.chars().all(|c| c.is_ascii_alphanumeric() || "-+_.:".contains(c)) {
+                                    out.push(t.to_string());
+                                }
+                            }
+                            start = abs;
+                        }
+                    }
+                    out
+                }
+
+                let mut dev_pkgs_set: HashSet<String> = HashSet::new();
+                for c in commands.iter() {
+                    let found = extract_pkgs_from_cmd(c);
+                    for p in found {
+                        let norm = normalize_pkg_name(&p);
+                        if !norm.is_empty() {
+                            dev_pkgs_set.insert(norm);
+                        }
+                    }
+                }
+
+                new_in_devcontainer = dev_pkgs_set.into_iter().filter(|p| !declared.contains(p)).collect();
+                new_in_devcontainer.sort();
+            }
+        }
+    }
+
+    Ok(DriftScanResult { new_in_container, new_in_devcontainer, baseline_missing, fallback_used: used_fallback })
+}
+
+#[tauri::command]
+/// Initialize or rewrite the baseline snapshot inside a running environment.
+/// This captures the current installed package list (normalized) and writes it
+/// to ~/.bazzite/base_packages.txt inside the container.
+pub async fn initialize_baseline(name: String) -> Result<(), String> {
+    // Probe package manager
+    let probe = r#"if command -v apt-get >/dev/null 2>&1; then echo apt; \\
+elif command -v dnf >/dev/null 2>&1; then echo dnf; \\
+elif command -v apk >/dev/null 2>&1; then echo apk; \\
+elif command -v pacman >/dev/null 2>&1; then echo pacman; \\
+else echo unknown; fi"#;
+    let probe_out = build_host_command("distrobox")
+        .args(["enter", &name, "--", "sh", "-lc", probe])
+        .output()
+        .map_err(|e| format!("Failed to execute package-manager probe: {}", e))?;
+    let pm = String::from_utf8_lossy(&probe_out.stdout).trim().to_string();
+
+    let (primary_cmd, fallback_cmd): (&str, Option<&str>) = match pm.as_str() {
+        "apt" => ("apt-mark showmanual", Some("dpkg-query -f '${binary:Package}\\n' -W")),
+        "dnf" => ("dnf repoquery --userinstalled --qf '%{name}\\n'", Some("rpm -qa --queryformat '%{NAME}\\n'")),
+        "apk" => ("apk info", None),
+        "pacman" => ("pacman -Qqe", Some("pacman -Qq")),
+        _ => ("rpm -qa --queryformat '%{NAME}\\n'", None),
+    };
+
+    let mut list_output = String::new();
+    let mut used_fallback = false;
+
+    let mut primary_exec = build_host_command_async("distrobox");
+    primary_exec.args(["enter", &name, "--", "sh", "-lc", primary_cmd]);
+    if let Ok(po) = primary_exec.output().await {
+        if po.status.success() {
+            list_output = String::from_utf8_lossy(&po.stdout).to_string();
+        }
+    }
+
+    if list_output.trim().is_empty() {
+        if let Some(fb) = fallback_cmd {
+            let mut fb_exec = build_host_command_async("distrobox");
+            fb_exec.args(["enter", &name, "--", "sh", "-lc", fb]);
+            if let Ok(fo) = fb_exec.output().await {
+                if fo.status.success() {
+                    list_output = String::from_utf8_lossy(&fo.stdout).to_string();
+                    used_fallback = true;
+                }
+            }
+        }
+    }
+
+    if used_fallback {
+        eprintln!("Warning: primary package-listing command failed or returned empty; used fallback for PM='{}'.", pm);
+    }
+
+    if list_output.trim().is_empty() {
+        return Err("Listing packages failed: no output".to_string());
+    }
+
+    let s = list_output;
+    let mut pkgs: Vec<String> = Vec::new();
+    for line in s.lines() {
+        let ln = line.trim();
+        if ln.is_empty() { continue; }
+        for tok in ln.split_whitespace() {
+            let norm = normalize_pkg_name(tok);
+            if !norm.is_empty() { pkgs.push(norm); }
+        }
+    }
+
+    // Build a here-doc to avoid quoting complexity
+    let mut printf_body = String::new();
+    for p in pkgs.iter() {
+        printf_body.push_str(p);
+        printf_body.push('\n');
+    }
+    let write_cmd = format!(
+        "mkdir -p ~/.bazzite && cat > ~/.bazzite/base_packages.txt <<'EOF'\\n{}EOF\\n",
+        printf_body
+    );
+
+    let mut write_exec = build_host_command_async("distrobox");
+    write_exec.args(["enter", &name, "--", "sh", "-lc", &write_cmd]);
+    let wout = write_exec
+        .output()
+        .await
+        .map_err(|e| format!("Failed to write baseline inside container: {}", e))?;
+    if !wout.status.success() {
+        let stderr = String::from_utf8_lossy(&wout.stderr).trim().to_string();
+        return Err(format!("Failed to write baseline file inside container: {}", stderr));
+    }
+
+    Ok(())
+}
+
 /// Add a system package to the project's manifest and attempt to install it
 /// inside the running environment.
 ///
@@ -655,11 +994,18 @@ pub async fn install_system_package(
             )
         })?;
 
-    if manifest.system_packages.iter().any(|p| p == &package) {
+    let package_norm = normalize_pkg_name(&package);
+    if manifest.system_packages.iter().any(|p| normalize_pkg_name(p) == package_norm) {
         return Ok(());
     }
 
-    manifest.system_packages.push(package.clone());
+    manifest.system_packages.push(package_norm.clone());
+    // Normalize all entries before writing to disk to keep the manifest consistent.
+    manifest.system_packages = manifest
+        .system_packages
+        .into_iter()
+        .map(|p| normalize_pkg_name(&p))
+        .collect();
     let manifest_json = serde_json::to_string_pretty(&manifest)
         .map_err(|e| format!("Failed to serialize manifest: {}", e))?;
     fs::write(&manifest_path, manifest_json).map_err(|e| {

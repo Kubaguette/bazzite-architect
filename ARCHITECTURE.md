@@ -264,6 +264,49 @@ Rationale: this targeted cleanup closes a practical UX loop—preventing VS Code
 
 Outcome: With a declarative manifest and immediate application in Distrobox, environments remain consistent enough for day-to-day work. DevContainer parity is ensured on the next rebuild via postCreateCommand.
 
+---
+
+### 5.4 State Reconciliation & Drift Detection
+
+To robustly detect and surface user-installed packages that diverge between the running Distrobox container and the declared manifest, the system uses a baseline/diff strategy combined with machine-readable package queries and strict normalization. This section documents the implementation details and rationale.
+
+- The Baseline Strategy
+  - During environment creation the backend records a baseline snapshot of explicitly user-installed packages inside the container and writes it to `~/.bazzite/base_packages.txt`.
+  - The baseline captures the environment state *after* the template's initial packages have been applied. This lets the drift engine ignore the known base image/tooling and focus on subsequent manual changes.
+
+- Machine-Readable Queries
+  - Instead of parsing human-facing package-manager output (which is brittle), the backend queries the package databases with machine-oriented commands that emit one package name per line:
+    - Fedora/DNF: `dnf repoquery --userinstalled --qf '%{name}\\n'` (primary), fallback: `rpm -qa --queryformat '%{NAME}\\n'`.
+    - Debian/APT: `apt-mark showmanual` (primary), fallback: `dpkg-query -f '${binary:Package}\\n' -W`.
+    - Arch/Pacman: `pacman -Qqe` (primary), fallback: `pacman -Qq`.
+    - Alpine/APK: `apk info` (no fallback required).
+  - Primary queries aim to return only explicitly user-installed (manual) packages, excluding automatically pulled dependencies.
+
+- The Diffing Formula
+  - The drift detection algorithm is intentionally simple and deterministic:
+
+    1. Collect the Current Packages from the running container (primary→fallback).
+    2. Read the Baseline Packages from `~/.bazzite/base_packages.txt` (recorded at create-time).
+    3. Read the Manifest Packages from `.bazzite-architect.json` (the single source of truth).
+
+    The computed drift is:
+
+      (Current Packages - Baseline Packages) - Manifest Packages = Drift
+
+  - This approach finds packages that were explicitly added to the running environment after creation and that are not declared in the manifest.
+
+- Normalization & Fallbacks
+  - Package names are normalized before comparison: trimmed, lowercased, and cleaned of common epoch/arch/version suffixes to prevent superficial mismatches.
+  - If a primary query fails or returns empty, the system attempts a conservative fallback (for example `rpm -qa`), and the drift command sets a `fallback_used` flag in its response so the UI can inform users that the result may include more items (including automatic dependencies).
+
+- UI Integration & Adoption Flow
+  - detect_environment_drift returns a typed payload with `new_in_container`, `new_in_devcontainer`, `baseline_missing`, and `fallback_used` fields. The frontend renders a prominent warning banner when `fallback_used` is true.
+  - The UI allows users to adopt detected packages (append them to the manifest). When adopted, the manifest is updated and normalized, and the DevContainer hooks are amended so the package is available on next rebuild.
+
+- Observability and Safety
+  - Baseline and current listing steps are best-effort. Failures are surfaced via progress events and a non-fatal `baseline_missing` flag is returned when the baseline cannot be read. The fallback flag and progress logs help users reason about the results and choose a conservative next step (for example: re-run `initialize_baseline` after installing desired packages explicitly).
+
+This reconciliation strategy provides a practical, low-noise drift detector that avoids surfacing transitive dependencies while still reliably catching manual package installs and drift-inducing ad-hoc changes.
 
 ---
 

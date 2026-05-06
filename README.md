@@ -66,6 +66,7 @@ Instead of googling cryptic commands or digging through config files, you manage
 - Rust backend: fast and memory-safe code for background tasks.
 - Rootless operation: uses user-level Podman/Distrobox so no root access is required.
 - Single manifest: one .bazzite-architect.json controls synchronization between host Distrobox and DevContainer.
+- Bidirectional Drift Detection: machine-readable, baseline-driven detection keeps the Distrobox container, the VS Code `devcontainer.json`, and the central manifest in sync; UI surfaces a fallback warning if a conservative query fallback is used.
 - Storage helpers: tools to move Podman user storage to another location to save space on constrained disks.
 
 ---
@@ -99,7 +100,7 @@ Each environment includes a starter manifest and suggested VS Code extensions.
 ## Roadmap
 
 - ✅ MVP (done): environment creation, manifest-based sync, storage relocation
-- 🔜 Next: drift detection and adoption flows
+- ✅ Drift detection and adoption flows (implemented)
 - 🔜 In progress: transactional rollback for sync operations
 
 

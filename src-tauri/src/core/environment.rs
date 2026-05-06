@@ -18,12 +18,6 @@ fn get_template(name: &str) -> Result<EnvironmentTemplate, String> {
             packages: &[
                 "nodejs",
                 "npm",
-                "git",
-                "curl",
-                "wget",
-                "which",
-                "procps-ng",
-                "findutils",
                 "tar",
             ],
             init_snippet: r#"
@@ -34,14 +28,17 @@ npm install -g typescript typescript-language-server pnpm yarn eslint prettier |
         "python" => Ok(EnvironmentTemplate {
             image: "registry.fedoraproject.org/fedora-toolbox:latest",
             packages: &[
+                "bzip2-devel",
+                "gcc",
+                "gcc-c++",
+                "libffi-devel",
+                "make",
+                "openssl-devel",
+                "pkgconf-pkg-config",
                 "python3",
+                "python3-devel",
                 "python3-pip",
-                "git",
-                "curl",
-                "wget",
-                "which",
-                "procps-ng",
-                "findutils",
+                "zlib-devel",
             ],
             init_snippet: r#"
 set -e
@@ -64,12 +61,6 @@ python3 -m pip install --user --upgrade pip || true
                 "lldb",
                 "clang",
                 "clang-tools-extra",
-                "git",
-                "curl",
-                "wget",
-                "which",
-                "procps-ng",
-                "findutils",
             ],
             init_snippet: r#"
 set -e
@@ -82,7 +73,16 @@ clang++ --version || true
         }),
         "rust" => Ok(EnvironmentTemplate {
             image: "registry.fedoraproject.org/fedora-toolbox:latest",
-            packages: &["git", "curl", "wget", "which", "procps-ng", "findutils"],
+            packages: &[
+                "gcc",
+                "gcc-c++",
+                "make",
+                "cmake",
+                "pkgconf-pkg-config",
+                "openssl-devel",
+                "zlib-devel",
+                "curl",
+            ],
             init_snippet: r#"
 set -e
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -99,12 +99,6 @@ rust-analyzer --version || true
                 "java-21-openjdk",
                 "java-21-openjdk-devel",
                 "maven",
-                "git",
-                "curl",
-                "wget",
-                "which",
-                "procps-ng",
-                "findutils",
             ],
             init_snippet: r#"
 set -e
@@ -379,6 +373,119 @@ echo "ENVIRONMENT_READY""#,
         return Err(err);
     }
 
+    // Record a baseline snapshot of installed packages inside the container so
+    // future drift detection can diff against the initial environment state.
+    progress(ProgressUpdate {
+        stage: "baseline",
+        message: "Recording baseline package snapshot inside environment".to_string(),
+        kind: ProgressKind::Info,
+    });
+
+    // Probe package manager and choose a suitable listing command
+    let probe = r#"if command -v apt-get >/dev/null 2>&1; then echo apt; \
+elif command -v dnf >/dev/null 2>&1; then echo dnf; \
+elif command -v apk >/dev/null 2>&1; then echo apk; \
+elif command -v pacman >/dev/null 2>&1; then echo pacman; \
+else echo unknown; fi"#;
+    let probe_out = build_host_command_async("distrobox")
+        .args(["enter", &params.name, "--", "sh", "-lc", probe])
+        .output()
+        .await;
+
+    let pm = match probe_out {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+        _ => String::from("unknown"),
+    };
+
+    // Determine primary and fallback listing commands that return only user-installed packages when possible.
+    let (primary_cmd, fallback_cmd): (&str, Option<&str>) = match pm.as_str() {
+        "apt" => ("apt-mark showmanual", Some("dpkg-query -f '${binary:Package}\\n' -W")),
+        "dnf" => ("dnf repoquery --userinstalled --qf '%{name}\\n'", Some("rpm -qa --queryformat '%{NAME}\\n'")),
+        "apk" => ("apk info", None),
+        "pacman" => ("pacman -Qqe", Some("pacman -Qq")),
+        _ => ("rpm -qa --queryformat '%{NAME}\\n'", None),
+    };
+
+    // Attempt primary, fall back if empty or failing.
+    let mut list_output = String::new();
+    let mut used_fallback = false;
+
+    let mut primary_exec = build_host_command_async("distrobox");
+    primary_exec.args(["enter", &params.name, "--", "sh", "-lc", primary_cmd]);
+    if let Ok(po) = primary_exec.output().await {
+        if po.status.success() {
+            list_output = String::from_utf8_lossy(&po.stdout).to_string();
+        }
+    }
+
+    if list_output.trim().is_empty() {
+        if let Some(fb) = fallback_cmd {
+            let mut fb_exec = build_host_command_async("distrobox");
+            fb_exec.args(["enter", &params.name, "--", "sh", "-lc", fb]);
+            if let Ok(fo) = fb_exec.output().await {
+                if fo.status.success() {
+                    list_output = String::from_utf8_lossy(&fo.stdout).to_string();
+                    used_fallback = true;
+                }
+            }
+        }
+    }
+
+    if used_fallback {
+        progress(ProgressUpdate {
+            stage: "baseline",
+            message: format!("Warning: primary package-listing command failed or returned empty; used fallback for PM='{}'.", pm),
+            kind: ProgressKind::Info,
+        });
+    }
+
+    if list_output.trim().is_empty() {
+        progress(ProgressUpdate {
+            stage: "baseline",
+            message: "Could not record baseline package snapshot (non-fatal)".to_string(),
+            kind: ProgressKind::Error,
+        });
+    } else {
+        // Normalize and write baseline file
+        let mut printf_body = String::new();
+        for line in list_output.lines() {
+            let ln = line.trim();
+            if ln.is_empty() { continue; }
+            printf_body.push_str(&ln.to_lowercase());
+            printf_body.push('\n');
+        }
+        let write_cmd = format!(
+            "mkdir -p ~/.bazzite && cat > ~/.bazzite/base_packages.txt <<'EOF'\\n{}EOF\\n",
+            printf_body
+        );
+        let mut write_exec = build_host_command_async("distrobox");
+        write_exec.args(["enter", &params.name, "--", "sh", "-lc", &write_cmd]);
+        match write_exec.output().await {
+            Ok(wout) => {
+                if !wout.status.success() {
+                    progress(ProgressUpdate {
+                        stage: "baseline",
+                        message: "Could not record baseline package snapshot (non-fatal)".to_string(),
+                        kind: ProgressKind::Error,
+                    });
+                } else {
+                    progress(ProgressUpdate {
+                        stage: "baseline",
+                        message: "Baseline package snapshot recorded".to_string(),
+                        kind: ProgressKind::Info,
+                    });
+                }
+            }
+            Err(e) => {
+                progress(ProgressUpdate {
+                    stage: "baseline",
+                    message: format!("Failed to record baseline package snapshot: {}", e),
+                    kind: ProgressKind::Error,
+                });
+            }
+        }
+    }
+
     progress(ProgressUpdate {
         stage: "scaffolding",
         message: "Scaffolding project files".to_string(),
@@ -418,6 +525,27 @@ echo "ENVIRONMENT_READY""#,
     if let Some(home_root) = &chosen_home {
         let root = Path::new(home_root);
 
+        // Initialize manifest from the template's base packages so day-one drift is avoided.
+        let manifest = EnvironmentManifest {
+            version: "1.0".to_string(),
+            name: params.name.clone(),
+            stack: params.template.clone(),
+            // Normalize manifest packages (lowercase, trimmed) to avoid case/whitespace mismatches.
+            system_packages: template.packages.iter().map(|s| s.trim().to_lowercase()).collect(),
+        };
+        let manifest_path = root.join(".bazzite-architect.json");
+        let json = serde_json::to_string_pretty(&manifest)
+            .map_err(|e| format!("Failed to serialize manifest: {}", e))?;
+        std::fs::write(&manifest_path, json).map_err(|e| {
+            format!(
+                "Failed to write manifest ({}): {}",
+                manifest_path.display(),
+                e
+            )
+        })?;
+        // Record manifest as a created file so the UI can display it.
+        created_files.push(manifest_path.display().to_string());
+
         match params.template.as_str() {
             "python" => {
                 let src_dir = root.join("src");
@@ -430,7 +558,20 @@ echo "ENVIRONMENT_READY""#,
                     "# Python Project\n\nGenerated by Bazzite Architect\n",
                 );
                 let exts = ["ms-python.python"];
-                let post = Some("dnf install -y python3 python3-pip python3-devel gcc gcc-c++ make pkgconf-pkg-config openssl-devel libffi-devel bzip2-devel zlib-devel && python3 -m pip install -r requirements.txt || true");
+                // Build post command from manifest system_packages + template-specific extras
+                let install_fragment = if !manifest.system_packages.is_empty() {
+                    format!("dnf install -y {}", manifest.system_packages.join(" "))
+                } else {
+                    String::new()
+                };
+                let mut post_cmd = String::new();
+                if !install_fragment.is_empty() {
+                    post_cmd.push_str(&install_fragment);
+                    post_cmd.push_str(" && ");
+                }
+                post_cmd.push_str("python3 -m pip install -r requirements.txt || true");
+                let post = Some(post_cmd.as_str());
+                // write_devcontainer_files expects the post command to live long enough; we pass a temporary string but it's used immediately.
                 if let Ok(mut files) = write_devcontainer_files(
                     root,
                     &params.name,
@@ -485,7 +626,18 @@ echo "ENVIRONMENT_READY""#,
                     "esbenp.prettier-vscode",
                     "ms-vscode.vscode-typescript-next",
                 ];
-                let post = Some("dnf install -y nodejs npm && npm install -g typescript typescript-language-server pnpm yarn eslint prettier && npm install");
+                let install_fragment = if !manifest.system_packages.is_empty() {
+                    format!("dnf install -y {}", manifest.system_packages.join(" "))
+                } else {
+                    String::new()
+                };
+                let mut post_cmd = String::new();
+                if !install_fragment.is_empty() {
+                    post_cmd.push_str(&install_fragment);
+                    post_cmd.push_str(" && ");
+                }
+                post_cmd.push_str("npm install -g typescript typescript-language-server pnpm yarn eslint prettier && npm install");
+                let post = Some(post_cmd.as_str());
                 if let Ok(mut files) = write_devcontainer_files(
                     root,
                     &params.name,
@@ -591,7 +743,16 @@ echo "ENVIRONMENT_READY""#,
                 }
 
                 let exts = ["ms-vscode.cpptools", "ms-vscode.cmake-tools"];
-                let post = Some("dnf install -y gcc gcc-c++ cmake make clang clang-tools-extra gdb ninja-build pkgconf-pkg-config");
+                let install_fragment = if !manifest.system_packages.is_empty() {
+                    format!("dnf install -y {}", manifest.system_packages.join(" "))
+                } else {
+                    String::new()
+                };
+                let mut post_cmd = String::new();
+                if !install_fragment.is_empty() {
+                    post_cmd.push_str(&install_fragment);
+                }
+                let post = if post_cmd.is_empty() { None } else { Some(post_cmd.as_str()) };
                 if let Ok(mut files) = write_devcontainer_files(
                     root,
                     &params.name,
@@ -622,7 +783,18 @@ echo "ENVIRONMENT_READY""#,
                     "# Rust\n/target\n**/*.rs.bk\n\n# Editors\n.vscode/\n.idea/\n",
                 );
                 let exts = ["rust-lang.rust-analyzer"];
-                let post = Some("dnf install -y gcc gcc-c++ make cmake pkgconf-pkg-config openssl-devel zlib-devel && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && . $HOME/.cargo/env && rustup component add rust-analyzer && cargo fetch");
+                let install_fragment = if !manifest.system_packages.is_empty() {
+                    format!("dnf install -y {}", manifest.system_packages.join(" "))
+                } else {
+                    String::new()
+                };
+                let mut post_cmd = String::new();
+                if !install_fragment.is_empty() {
+                    post_cmd.push_str(&install_fragment);
+                    post_cmd.push_str(" && ");
+                }
+                post_cmd.push_str("curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && . $HOME/.cargo/env && rustup component add rust-analyzer && cargo fetch");
+                let post = Some(post_cmd.as_str());
                 if let Ok(mut files) = write_devcontainer_files(
                     root,
                     &params.name,
@@ -651,7 +823,20 @@ echo "ENVIRONMENT_READY""#,
                 write_file_if_absent(&root.join(".gitignore"), "# C#\n/bin/\n/obj/\n\n# Editors\n.vscode/\n.idea/\n");
 
                 let exts = ["ms-dotnettools.csharp", "ms-dotnettools.csdevkit"];
-                let post = Some("dotnet restore || true");
+                let install_fragment = if !manifest.system_packages.is_empty() {
+                    // For Debian-based images, prefer apt-get install. We'll attempt apt-get
+                    // to be conservative; if apt is unavailable the command may fail harmlessly.
+                    format!("apt-get update && apt-get install -y {}", manifest.system_packages.join(" "))
+                } else {
+                    String::new()
+                };
+                let mut post_cmd = String::new();
+                if !install_fragment.is_empty() {
+                    post_cmd.push_str(&install_fragment);
+                    post_cmd.push_str(" && ");
+                }
+                post_cmd.push_str("dotnet restore || true");
+                let post = Some(post_cmd.as_str());
                 if let Ok(mut files) = write_devcontainer_files(
                     root,
                     &params.name,
@@ -696,7 +881,18 @@ echo "ENVIRONMENT_READY""#,
                     "vscjava.vscode-java-debug",
                     "vscjava.vscode-maven",
                 ];
-                let post = Some("dnf install -y java-21-openjdk java-21-openjdk-devel maven && mvn -q -DskipTests dependency:go-offline || true");
+                let install_fragment = if !manifest.system_packages.is_empty() {
+                    format!("dnf install -y {}", manifest.system_packages.join(" "))
+                } else {
+                    String::new()
+                };
+                let mut post_cmd = String::new();
+                if !install_fragment.is_empty() {
+                    post_cmd.push_str(&install_fragment);
+                    post_cmd.push_str(" && ");
+                }
+                post_cmd.push_str("mvn -q -DskipTests dependency:go-offline || true");
+                let post = Some(post_cmd.as_str());
                 if let Ok(mut files) = write_devcontainer_files(
                     root,
                     &params.name,
@@ -709,11 +905,17 @@ echo "ENVIRONMENT_READY""#,
             }
             _ => {
                 let exts: [&str; 0] = [];
+                // default: build post from manifest if any
+                let mut post_cmd_string = String::new();
+                if !manifest.system_packages.is_empty() {
+                    post_cmd_string = format!("dnf install -y {}", manifest.system_packages.join(" "));
+                }
+                let post = if post_cmd_string.is_empty() { None } else { Some(post_cmd_string.as_str()) };
                 if let Ok(mut files) = write_devcontainer_files(
                     root,
                     &params.name,
                     "registry.fedoraproject.org/fedora-toolbox:latest",
-                    None,
+                    post,
                     &exts,
                 ) {
                     devcontainer_files.append(&mut files);
@@ -732,24 +934,8 @@ echo "ENVIRONMENT_READY""#,
         }
     }
 
+    // note: manifest was created earlier to avoid day-one drift
     if let Some(home_root) = &chosen_home {
-        let manifest = EnvironmentManifest {
-            version: "1.0".to_string(),
-            name: params.name.clone(),
-            stack: params.template.clone(),
-            system_packages: vec![],
-        };
-        let manifest_path = Path::new(home_root).join(".bazzite-architect.json");
-        let json = serde_json::to_string_pretty(&manifest)
-            .map_err(|e| format!("Failed to serialize manifest: {}", e))?;
-        std::fs::write(&manifest_path, json).map_err(|e| {
-            format!(
-                "Failed to write manifest ({}): {}",
-                manifest_path.display(),
-                e
-            )
-        })?;
-
         // Security/UX: prevent GNOME Tracker from indexing newly created
         // project home directories and avoid excessive I/O on developer machines.
         // An empty .trackerignore is sufficient for Tracker to skip the directory.

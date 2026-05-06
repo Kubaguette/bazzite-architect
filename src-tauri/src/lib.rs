@@ -43,6 +43,7 @@ pub fn run() {
             commands::env::delete_environment,
             commands::env::install_system_package,
             commands::env::get_environment_manifest,
+            commands::env::detect_environment_drift,
             // VS Code
             commands::vscode::open_in_vscode,
             // Terminal
