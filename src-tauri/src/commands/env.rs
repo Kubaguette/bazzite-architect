@@ -758,9 +758,7 @@ else echo unknown; fi"#;
 
     // Use baseline diffing: retrieve the baseline snapshot from ~/.bazzite/base_packages.txt
     // and compute (current_packages - baseline_packages) to find packages added since creation.
-    let mut new_in_container: Vec<String> = Vec::new();
 
-    // Read baseline file if present (but do not error if missing)
     let mut baseline_missing = false;
     let mut baseline_set: HashSet<String> = HashSet::new();
     let mut cat_cmd = build_host_command_async("distrobox");
@@ -793,7 +791,7 @@ else echo unknown; fi"#;
     }
 
     // Filter out packages already declared in manifest
-    new_in_container = added.into_iter().filter(|p| !declared.contains(p)).collect();
+    let mut new_in_container: Vec<String> = added.into_iter().filter(|p| !declared.contains(p)).collect();
     new_in_container.sort();
 
     // --------- DevContainer -> Manifest (parse devcontainer.json) ---------
