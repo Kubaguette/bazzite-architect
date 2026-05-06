@@ -68,24 +68,32 @@ export default function SettingsPage() {
               <div style={{ marginTop: 6, color: '#e5e7eb', fontSize: 13 }}>Validate host tooling required by the app</div>
             </div>
             <div>
-              <button onClick={runSystemCheck} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>Check</button>
+              <button
+                onClick={runSystemCheck}
+                className={`system-check-btn ${msg === 'Checking...' || system ? 'active' : ''}`}
+                style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}
+              >
+                Check
+              </button>
             </div>
           </div>
 
           <div style={{ marginTop: 12 }}>
-            {msg && <div className="status-box" style={{ padding: 10 }}>{msg}</div>}
-            {system && (
-              <div className="status-box" style={{ textAlign: 'left', padding: 12, marginTop: 8 }}>
-                <p style={{ margin: 0 }}>
-                  <strong>Podman:</strong> {system.podman_ok ? " ✅" : " ❌"}
-                  {system.podman_version ? ` – ${system.podman_version}` : ""}
-                </p>
-                <p style={{ marginTop: 6, marginBottom: 0 }}>
-                  <strong>Distrobox:</strong> {system.distrobox_ok ? " ✅" : " ❌"}
-                  {system.distrobox_version ? ` – ${system.distrobox_version}` : ""}
-                </p>
-              </div>
-            )}
+            <div className={`expanding-box ${msg || system ? 'open' : ''}`}>
+              {msg ? <div className="status-box" style={{ padding: 10, marginTop: 8 }}>{msg}</div> : null}
+              {system ? (
+                <div className="status-box" style={{ textAlign: 'left', padding: 12, marginTop: msg ? 8 : 6 }}>
+                  <p style={{ margin: 0 }}>
+                    <strong>Podman:</strong> {system.podman_ok ? " ✅" : " ❌"}
+                    {system.podman_version ? ` – ${system.podman_version}` : ""}
+                  </p>
+                  <p style={{ marginTop: 6, marginBottom: 0 }}>
+                    <strong>Distrobox:</strong> {system.distrobox_ok ? " ✅" : " ❌"}
+                    {system.distrobox_version ? ` – ${system.distrobox_version}` : ""}
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 

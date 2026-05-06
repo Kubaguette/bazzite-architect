@@ -133,7 +133,7 @@ export default function StoragePage() {
       <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 16 }}>
         {drivesList ? (
           drivesList.map((d, i) => (
-            <div key={i} style={{
+            <div key={i} className={`drive-card enter`} style={{
               padding: 14,
               background: "#0f1724",
               borderRadius: 10,
@@ -141,7 +141,9 @@ export default function StoragePage() {
               boxShadow: "0 6px 18px rgba(2,6,23,0.6)",
               textAlign: "left",
               margin: 0,
+              animationDelay: `${i * 350}ms`,
             }}>
+
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div>
                   <strong style={{ color: '#ffffff', fontWeight: 600 }}>📍 {d.mount_point}</strong>

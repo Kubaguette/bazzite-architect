@@ -63,22 +63,50 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
   const { refresh } = useEnvironments();
   const [resolvedPath, setResolvedPath] = useState<string | null>(base?.project_path ?? null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const path = resolvedPath;
 
-  // Close menu on outside click
+  const MENU_EXIT_MS = 260; // must match CSS pop-out duration
+
+  // Close menu on outside click or Escape
   useEffect(() => {
     if (!menuOpen) return;
     const onDocClick = (e: MouseEvent) => {
       const t = e.target as Node | null;
       if (containerRef.current && t && !containerRef.current.contains(t)) {
-        setMenuOpen(false);
+        // trigger close flow
+        handleCloseMenu();
       }
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleCloseMenu();
+    };
     document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [menuOpen]);
+
+  const handleOpenMenu = useCallback(() => {
+    setMounted(true);
+    setClosing(false);
+    setMenuOpen(true);
+  }, []);
+
+  const handleCloseMenu = useCallback(() => {
+    setMenuOpen(false);
+    setClosing(true);
+    setTimeout(() => {
+      setClosing(false);
+      setMounted(false);
+    }, MENU_EXIT_MS);
+  }, []);
+
 
   // Seed cache from backend-provided project_bytes if present
   useEffect(() => {
@@ -136,7 +164,7 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
   };
 
   const handleStart = useCallback(async () => {
-    setMenuOpen(false);
+    handleCloseMenu();
     toast.info("Starting container…");
     await invoke("client_log", { source: "ui", level: "INFO", message: `start_environment requested for '${env.name}'` }).catch(() => {});
     try {
@@ -149,10 +177,10 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
       await invoke("client_log", { source: "ui", level: "ERROR", message: `start_environment failed for '${env.name}': ${msg}` }).catch(() => {});
       toast.error(msg || "Start failed");
     }
-  }, [env.name, refresh]);
+  }, [env.name, refresh, handleCloseMenu]);
 
   const handleStop = useCallback(async () => {
-    setMenuOpen(false);
+    handleCloseMenu();
     toast.info("Stopping container…");
     await invoke("client_log", { source: "ui", level: "INFO", message: `stop_environment requested for '${env.name}'` }).catch(() => {});
     try {
@@ -165,15 +193,15 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
       await invoke("client_log", { source: "ui", level: "ERROR", message: `stop_environment failed for '${env.name}': ${msg}` }).catch(() => {});
       toast.error(msg || "Stop failed");
     }
-  }, [env.name, refresh]);
+  }, [env.name, refresh, handleCloseMenu]);
 
   const handleDelete = useCallback(() => {
-    setMenuOpen(false);
+    handleCloseMenu();
     onDelete(env.name);
-  }, [env.name, onDelete]);
+  }, [env.name, onDelete, handleCloseMenu]);
 
   const handleManagePackages = useCallback(async () => {
-    setMenuOpen(false);
+    handleCloseMenu();
     if (!resolvedPath) {
       try {
         const p = await invoke<string | null>("resolve_project_path", { name: env.name });
@@ -188,7 +216,7 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
       }
     }
     setManageOpen(true);
-  }, [resolvedPath, env.name]);
+  }, [resolvedPath, env.name, handleCloseMenu]);
 
   const handleOpenTerminal = useCallback(async () => {
     toast.info("Opening terminal…");
@@ -218,9 +246,12 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <strong style={{ color: "#ffffff", fontWeight: 600 }}>🧪 {env.name}</strong>
         <button
-          onClick={() => setMenuOpen((v) => !v)}
+          onClick={() => {
+            if (!menuOpen) handleOpenMenu(); else handleCloseMenu();
+          }}
           title="Menu"
           aria-label="Actions"
+          className={mounted && !closing ? 'env-menu-trigger open' : 'env-menu-trigger'}
           style={{
             background: "transparent",
             border: "none",
@@ -232,93 +263,28 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
             cursor: "pointer",
           }}
         >
-          ⋮
+          <span aria-hidden>⋮</span>
         </button>
       </div>
 
-      {menuOpen && (
-        <div
-          style={{
-            position: "absolute",
-            top: 36,
-            right: 8,
-            zIndex: 1000,
-            background: "#1f2937",
-            border: "1px solid #374151",
-            borderRadius: 8,
-            minWidth: 180,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-            overflow: "hidden",
-          }}
-        >
-          <button
-            onClick={handleStart}
-            disabled={isRunning}
-            style={{
-              display: "flex",
-              width: "100%",
-              gap: 8,
-              alignItems: "center",
-              background: "transparent",
-              border: "none",
-              color: isRunning ? "#6b7280" : "#e5e7eb",
-              padding: "10px 12px",
-              cursor: isRunning ? "not-allowed" : "pointer",
-              opacity: isRunning ? 0.6 : 1,
-            }}
-          >
-            ▶ Start
+      {mounted && (
+        <div className={`menu-popover env-menu ${closing ? 'closing' : 'open'}`} role="menu" aria-label="Environment actions" style={{ position: 'absolute', top: 36, right: 8, zIndex: 1000 }}>
+          <button className="menu-item btn-primary" role="menuitem" onClick={handleStart} disabled={isRunning} aria-disabled={isRunning}>
+            <span className="icon" aria-hidden>▶️</span>
+            <span className="text">Start</span>
           </button>
-          <button
-            onClick={handleStop}
-            disabled={isStopped}
-            style={{
-              display: "flex",
-              width: "100%",
-              gap: 8,
-              alignItems: "center",
-              background: "transparent",
-              border: "none",
-              color: isStopped ? "#6b7280" : "#e5e7eb",
-              padding: "10px 12px",
-              cursor: isStopped ? "not-allowed" : "pointer",
-              opacity: isStopped ? 0.6 : 1,
-            }}
-          >
-            ■ Stop
+          <button className="menu-item btn-primary" role="menuitem" onClick={handleStop} disabled={isStopped} aria-disabled={isStopped}>
+            <span className="icon" aria-hidden>⏹️</span>
+            <span className="text">Stop</span>
           </button>
-          <button
-            onClick={handleManagePackages}
-            style={{
-              display: "flex",
-              width: "100%",
-              gap: 8,
-              alignItems: "center",
-              background: "transparent",
-              border: "none",
-              color: "#e5e7eb",
-              padding: "10px 12px",
-              cursor: "pointer",
-            }}
-          >
-            📦 Manage packages
+          <button className="menu-item btn-primary" role="menuitem" onClick={handleManagePackages}>
+            <span className="icon" aria-hidden>📦</span>
+            <span className="text">Manage packages</span>
           </button>
-          <div style={{ height: 1, background: "#374151" }} />
-          <button
-            onClick={handleDelete}
-            style={{
-              display: "flex",
-              width: "100%",
-              gap: 8,
-              alignItems: "center",
-              background: "transparent",
-              border: "none",
-              color: "#ef4444",
-              padding: "10px 12px",
-              cursor: "pointer",
-            }}
-          >
-            🗑️ Delete
+          <div className="menu-divider" role="separator" />
+          <button className="menu-item btn-danger" role="menuitem" onClick={handleDelete}>
+            <span className="icon" aria-hidden>🗑️</span>
+            <span className="text">Delete</span>
           </button>
         </div>
       )}
