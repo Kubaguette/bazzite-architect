@@ -156,7 +156,7 @@ sudo dnf install ./Bazzite-Architect-1.2.0.x86_64.rpm
 
 *Note: Make sure Podman and Distrobox are available on your system (standard on Bazzite).*
 
-- AppImage option: You can also choose the AppImage distribution from the Releases page — this is a portable Linux bundle that works across many distributions (Ubuntu, Debian, Arch, SteamOS, etc.) without installation. AppImages are convenient but typically larger than native packages because they bundle runtime dependencies; if download size or disk usage matters, prefer the native .deb or .rpm for your distribution.
+- **AppImage option**: You can also choose the AppImage distribution from the Releases page — this is a portable Linux bundle that works across many distributions (Ubuntu, Debian, Arch, SteamOS, etc.) without installation. AppImages are convenient but typically larger than native packages because they bundle runtime dependencies; if download size or disk usage matters, prefer the native .deb or .rpm for your distribution.
 
 ---
 
