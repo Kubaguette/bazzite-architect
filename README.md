@@ -16,9 +16,9 @@ A lightweight tool to create reproducible development environments on immutable 
 
 ## 🚀 Demo
 
-![EnvStation Demo](git_src/assets/ba_architect_gif_py_setup.webp)
+![EnvStation Demo](git_src/assets/final_cut.webp)
 
-*Creating a full Python environment and launching VS Code **in under 45 seconds** — UI remains fully responsive.*
+*Creating a full Python environment and launching VS Code **in under 90 seconds** — UI remains fully responsive.*
 
 ---
 
