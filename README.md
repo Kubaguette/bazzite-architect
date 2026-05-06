@@ -24,14 +24,16 @@ A lightweight tool to create reproducible development environments on immutable 
 
 ## Introduction
 
-EnvStation is a desktop app that helps you keep development environments in sync on immutable Linux systems. It uses a small Rust backend and a React/Tauri frontend to manage Distrobox and DevContainer setups. A single manifest keeps the host container environment and the IDE container aligned while respecting the constraints of a read-only root filesystem.
+**EnvStation** is a lightweight desktop application designed to simplify and synchronize development environments on immutable Linux distributions. 
 
-For a technical deep dive, see ARCHITECTURE.md.
+Built with a **Rust** backend and a **React/Tauri** frontend, it seamlessly manages the interplay between **Distrobox** and **DevContainers**. By utilizing a single manifest as the "source of truth," EnvStation ensures your host terminal and IDE environment remain perfectly aligned—all while respecting the architectural constraints of a read-only root filesystem.
+
+For a technical deep dive into the synchronization logic, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
 ## Why EnvStation?
 
-Traditional development workflows often break on **immutable distributions** (like Bazzite, Fedora Silverblue, or SteamOS). EnvStation fixes this by acting as the intelligent bridge between your host terminal and your IDE.
+Traditional development workflows often break on **immutable distributions** (like Bazzite, Fedora Silverblue, or Arch Linux). EnvStation fixes this by acting as the intelligent bridge between your host terminal and your IDE.
 
 ### 1. Unified Environment Parity
 On immutable systems, your host is read-only. Usually, your dependencies are trapped inside a DevContainer, leaving your native host terminal (Ptyxis, Alacritty) "dumb."
@@ -141,11 +143,10 @@ systemctl --user enable --now podman.socket
 
 ### Installation (End-User)
 
-Recommended (No‑Reboot) Way — AppImage
---------------------------------------
+#### AppImage (Recommended)
+
 For immutable hosts (Bazzite, Fedora Silverblue, Kinoite, SteamOS), the AppImage is the recommended distribution because it requires no system changes or reboot. It provides the smoothest experience for users who cannot or prefer not to modify the OSTree system image.
 
-#### AppImage (Recommended)
 AppImage runs on most distributions without installation:
 ```bash
 chmod +x EnvStation-1.0.0.AppImage
@@ -155,8 +156,7 @@ AppImages are portable and convenient but usually larger (they bundle runtimes).
 
 ---
 
-Other install options
----------------------
+### Other install options
 EnvStation is also distributed as native packages (.deb and .rpm). Choose the option that fits your distro and policy.
 
 #### Debian / Ubuntu (.deb)
@@ -310,4 +310,4 @@ EnvStation is distributed under the GNU General Public License v3.0. See LICENSE
 
 ---
 
-Built by developers, for the Bazzite community. Aiming for native, frictionless engineering.
+Built by developers, for the Bazzite and whole Linux community. Aiming for native, frictionless engineering.
