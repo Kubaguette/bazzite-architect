@@ -153,15 +153,7 @@ systemctl --user enable --now podman.socket
 ---
 
 ### Installation (End-User)
-
-#### AppImage
-
-Comming soon.
-
----
-
-### Other install options
-EnvStation is also distributed as native packages (.deb and .rpm). Choose the option that fits your distro and policy.
+EnvStation is currently distributed as native packages (.deb and .rpm). Choose the option that fits your distro and policy.
 
 #### Debian / Ubuntu (.deb)
 ```bash
@@ -202,6 +194,12 @@ sudo pacman -U ./envstation-1.0.0-1-x86_64.pkg.tar.zst
 paru -S envstation   # or yay -S envstation
 ```
 If no Arch package is available, prefer the AppImage or build from source.
+
+#### AppImage
+
+Comming soon.
+
+---
 
 #### Notes:
 - Make sure Podman and Distrobox are installed and working before running EnvStation. EnvStation expects rootless Podman for normal operation.
