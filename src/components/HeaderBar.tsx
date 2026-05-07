@@ -20,6 +20,7 @@ import { NavLink } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import WindowControls from "./WindowControls";
 import PrimaryMenu from "./PrimaryMenu";
+import EnvLogo from "../../git_src/assets/EnvStation.svg";
 
 export default function HeaderBar() {
   const [advanced, setAdvanced] = useState<boolean>(() => typeof localStorage !== "undefined" && localStorage.getItem("advancedMode") === "1");
@@ -47,7 +48,8 @@ export default function HeaderBar() {
     <div className="headerbar" data-tauri-drag-region onMouseDown={onMouseDown}>
       <div className="header-title">
         {/* Left: logo/title */}
-        Bazzite Architect
+        <img src={EnvLogo} alt="EnvStation logo" className="app-logo" draggable={false} />
+        EnvStation
       </div>
       <nav className="header-nav view-switcher" aria-label="Views">
         <NavLink to="/dashboard" className={({ isActive }) => `view-btn ${isActive ? "active" : ""}`} data-tauri-drag-region="none">

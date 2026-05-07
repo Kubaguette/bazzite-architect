@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Allows invoking Bazzite Architect application commands from the main window",
+  "description": "Allows invoking EnvStation application commands from the main window",
   "commands": {
     "allow": [
       "system_check",

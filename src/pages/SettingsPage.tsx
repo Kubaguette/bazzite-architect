@@ -109,7 +109,7 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={advanced}
                   onChange={(e) => setAdvanced(e.target.checked)}
-                  style={{ width: 18, height: 18 }}
+                  style={{ width: 16, height: 16, boxSizing: 'border-box', padding: 0, margin: 0, accentColor: 'var(--primary-blue)' }}
                 />
                 <span style={{ color: '#e5e7eb' }}>Show</span>
               </label>

@@ -1,63 +1,71 @@
 <p align="center">
-  <img src="git_src/assets/ba_logo.svg" alt="Bazzite Architect" width="160" />
+  <img src="git_src/assets/EnvStation_Banner.png" alt="EnvStation" width="500" />
   <br/>
   <br/>
+  <sub><b>Built with the power of</b></sub><br/>
   <img src="https://img.shields.io/badge/backend-Rust_1.80+-000000?style=for-the-badge&logo=rust&logoColor=white" alt="Rust" />
   <img src="https://img.shields.io/badge/framework-Tauri_V2-024B6A?style=for-the-badge&logo=tauri&logoColor=white" alt="Tauri" />
   <img src="https://img.shields.io/badge/frontend-React_18-0D6EFD?style=for-the-badge&logo=react&logoColor=white" alt="React" />
   <img src="https://img.shields.io/badge/runtime-Podman-076B2A?style=for-the-badge&logo=podman&logoColor=white" alt="Podman" />
+  
+  <br/>
+  <br/>
+  <sub><b>Ready-to-use environments for</b></sub><br/>
+ <img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/TS%20%2F%20JS-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Rust-black?style=flat-square&logo=rust&logoColor=white" />
+  <img src="https://img.shields.io/badge/C%2B%2B-00599C?style=flat-square&logo=c%2B%2B&logoColor=white" />
+  <img src="https://img.shields.io/badge/C%23-239120?style=flat-square&logo=c-sharp&logoColor=white" />
+  <img src="https://img.shields.io/badge/Java-ED8B00?style=flat-square&logo=openjdk&logoColor=white" />
 </p>
 
-# Bazzite Architect
+# EnvStation
 
-A lightweight tool to create reproducible development environments on immutable Linux distributions (Bazzite / Fedora Kinoite).
+A lightweight tool to create reproducible development environments on immutable Linux distributions (Bazzite / Fedora / Arch — and more).
 
 ---
 
 ## 🚀 Demo
 
-![Bazzite Architect Demo](git_src/assets/ba_architect_gif_py_setup.webp)
+![EnvStation Demo](git_src/assets/final_cut.webp)
 
-*Creating a full Python environment and launching VS Code **in under 45 seconds** — UI remains fully responsive.*
+*Creating a full Python environment and launching VS Code **in under 90 seconds** — UI remains fully responsive. Waiting time skipped in clip.*
 
 ---
 
 ## Introduction
 
-Bazzite Architect is a desktop app that helps you keep development environments in sync on immutable Linux systems. It uses a small Rust backend and a React/Tauri frontend to manage Distrobox and DevContainer setups. A single manifest keeps the host container environment and the IDE container aligned while respecting the constraints of a read-only root filesystem.
+**EnvStation** is a lightweight desktop application designed to simplify and synchronize development environments on immutable Linux distributions. 
 
-For a technical deep dive, see ARCHITECTURE.md.
+Built with a **Rust** backend and a **React/Tauri** frontend, it seamlessly manages the interplay between **Distrobox** and **DevContainers**. By utilizing a single manifest as the "source of truth," EnvStation ensures your host terminal and IDE environment remain perfectly aligned—all while respecting the architectural constraints of a read-only root filesystem.
+
+For a technical deep dive into the synchronization logic, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ---
-## Why use this?
+## Why EnvStation?
 
-### 1. Working outside of your IDE
+Traditional development workflows often break on **immutable distributions** (like Bazzite, Fedora Silverblue, or Arch Linux). EnvStation fixes this by acting as the intelligent bridge between your host terminal and your IDE.
 
-If you exclusively work inside VS Code and only ever use the integrated terminal, you might not need this tool. DevContainers alone will work perfectly fine for you.
+### 1. Unified Environment Parity
+On immutable systems, your host is read-only. Usually, your dependencies are trapped inside a DevContainer, leaving your native host terminal (Ptyxis, Alacritty) "dumb."
+* **The Solution:** EnvStation mirrors your environment across **Distrobox** (for your native terminal) and **DevContainers** (for your IDE).
+* **The Result:** Run `gcc`, `python`, or `git` anywhere—inside or outside of VS Code—without configuring it twice.
 
-**But here is the catch on immutable distros:**
-Because your root filesystem is read-only, you can't just `sudo dnf install` your project's dependencies on your host machine. 
+### 2. Intelligent Drift Detection
+Manual changes in the terminal are inevitable—but they often lead to "snowflake" environments that are impossible to reproduce. EnvStation keeps you in control:
+* **Smart Baseline:** Instead of cluttering your view with hundreds of pre-installed system packages, EnvStation snapshots the environment the moment it's created. This ensures you only see the packages *you* actually added.
+* **No More Guesswork:** The app detects when your container, your VS Code setup, and your configuration file fall out of sync.
+* **One-Click Sync:** If things "drift" apart, EnvStation offers a simple fix: a single click to bring all layers back into perfect alignment.
 
-So, what happens when you close VS Code but still want to run a quick build script, use a native git client, or test something in your regular system terminal (like Ptyxis or Alacritty)? 
-**You hit a wall.** Your dependencies (like `gcc`, `cmake`, or Python packages) are locked inside the DevContainer. Your host terminal doesn't know they exist.
+**The Result:** Your environments stay clean, slim, and—most importantly—reproducible, no matter how much you experiment in the terminal.
 
-To fix this on an immutable OS, you need a **Distrobox** that acts as your mutable host replacement. But keeping your Distrobox and your DevContainer dependencies in sync manually is a frustrating, error-prone mess.
+### 3. Abstracting the Complexity
+You shouldn't need a PhD in Container-Orchestration just to write "Hello World."
+* **No Terminal Acrobatics:** Manage Podman and Distrobox through a clean GUI. No more memorizing cryptic flags or complex volume mount syntax.
+* **Safe Defaults:** Automatically handles tricky technical hurdles like **Podman GraphRoot relocation**—a common point of failure on immutable systems.
+* **Ready in under 2 Minutes:** Choose from pre-configured templates (Python, Rust, C++, etc.) and go from zero to "ready-to-code" in three clicks.
 
-**The Use Case:**
-Bazzite Architect solves exactly this. It gives you the freedom to work outside of your IDE. It uses a single manifest to automatically mirror your dependencies across both worlds. You get the perfect IDE integration of DevContainers *and* a fully capable native terminal environment in Distrobox, without writing the boilerplate twice.
-
-### 2. For Newcomers to Immutable Linux
-If you are coming from a traditional OS (like Ubuntu or Windows), the concept of rootless containers, Podman, and Distrobox can be overwhelming. You just want to write code. Instead of figuring out why a standard package installation fails, or wrestling with surgical terminal commands pointing to specific binary paths just to install a simple library, **Bazzite Architect abstracts the complexity away**. It gives you a simple GUI to spin up a working, isolated workspace in seconds without having to read pages of container documentation.
-
-When you need a new system package (like a compiler or a specific library), you simply select it in the app's interface. The application automatically runs the necessary terminal commands in the background to install it in your host terminal and syncs it to your IDE environment at the same time.
-
-### 3. Stop Fiddling with the Terminal: Your Control Center
-Instead of googling cryptic commands or digging through config files, you manage your entire setup through a clean interface. Bazzite Architect handles the annoying parts of container management completely in the background.
-
-- Click instead of Type: Start, stop, and manage your containers directly in the app without ever having to memorize a Podman or Distrobox command.
-- Ready-to-code in 60 Seconds: With currently 6 pre-configured project setups, you’re ready to go in just three clicks, perfect for beginners who just want to get to work.
-- Technical Hurdles Solved: The tool safely handles tricky tasks like relocating your Podman storage (GraphRoot), which is a common point of failure on immutable systems.
-- Everything in Sync: It acts as the bridge that automatically keeps your Distrobox and DevContainers in sync, so your tools work identically everywhere.
+> **EnvStation is the Control Center for your development flow.** It combines the isolation of containers with the comfort of a native OS, ensuring your manifest remains the single source of truth.
 
 ---
 
@@ -65,7 +73,7 @@ Instead of googling cryptic commands or digging through config files, you manage
 
 - Rust backend: fast and memory-safe code for background tasks.
 - Rootless operation: uses user-level Podman/Distrobox so no root access is required.
-- Single manifest: one .bazzite-architect.json controls synchronization between host Distrobox and DevContainer.
+- Single manifest: one .envstation.json controls synchronization between host Distrobox and DevContainer.
 - Bidirectional Drift Detection: machine-readable, baseline-driven detection keeps the Distrobox container, the VS Code `devcontainer.json`, and the central manifest in sync; UI surfaces a fallback warning if a conservative query fallback is used.
 - Storage helpers: tools to move Podman user storage to another location to save space on constrained disks.
 
@@ -73,7 +81,7 @@ Instead of googling cryptic commands or digging through config files, you manage
 
 ## Supported Environments
 
-Bazzite Architect provides scaffolding and DevContainer sync for these ecosystems:
+EnvStation provides scaffolding and DevContainer sync for these ecosystems:
 
 - Python (data science, AI, scripting)
 - Node / React (frontend & fullstack)
@@ -88,7 +96,7 @@ Each environment includes a starter manifest and suggested VS Code extensions.
 
 ## Comparison
 
-| Concern | Manual Distrobox / DevContainer Setup | Bazzite Architect |
+| Concern | Manual Distrobox / DevContainer Setup | EnvStation |
 |---|---:|---|
 | Repeatable setup | ad-hoc scripts and manual edits | declarative manifest + scaffolding |
 | Security model | varies by setup | rootless Podman with controlled mounts |
@@ -108,7 +116,7 @@ Each environment includes a starter manifest and suggested VS Code extensions.
 
 ## Motivation: From "Nightmare Setup" to Native Flow
 
-Bazzite Architect was born out of real-world friction. 
+EnvStation was born out of real-world friction. 
 
 Coming from a Frontend background (React/TS), I faced a major hurdle when moving my AI research - local training of OpenCV and ResNet models - to **Bazzite**. In a prior project (Goldgrube Coin Tool) I relied on ResNet models and local toolchains; you can find that repository [here](https://github.com/Kubaguette/goldgrube-coin-tool). As an immutable distribution, the "Windows way" or even the "standard Linux way" of installing toolchains simply didn't work.
 
@@ -118,7 +126,7 @@ I found myself trapped in a **"Nightmare Setup"**:
 - ❌ High barrier to entry for students and engineers new to immutable OSs.
 
 **The Mission:**
-I built this tool to ensure that no developer has to waste hours on environment plumbing again. Bazzite Architect bridges the gap, providing a frictionless, native-feeling UI to manage what used to be a complex, manual process.
+I built this tool to ensure that no developer has to waste hours on environment plumbing again. EnvStation bridges the gap, providing a frictionless, native-feeling UI to manage what used to be a complex, manual process.
 
 ---
 
@@ -126,71 +134,162 @@ I built this tool to ensure that no developer has to waste hours on environment 
 
 These steps are intentionally concise. Expand them to match your environment and distribution.
 
-### Prerequisites
+### Prerequisites (common)
+- An immutable Linux host (Bazzite / Kinoite / Fedora Silverblue / SteamOS, etc.)
+- Podman (rootless) available on the host
+- Distrobox installed for comfortable host-container integration
+- Node >= 18 and npm or pnpm (for frontend development)
+- Rust (stable) + cargo (for backend build)
 
-- A modern immutable Linux installation (Bazzite, Kinoite, or compatible Fedora spin).
-- Podman (rootless) available on the host.
-- Distrobox installed for friendly host-container integration.
-- Node >= 18 / npm or pnpm for frontend development.
-- Rust (stable) + cargo for backend build.
+Verify Podman and Distrobox are available:
+```bash
+podman --version
+distrobox --version
+podman info   # ensures Podman can run for your user
+# If you use the Podman API/socket with other tools, enable it:
+systemctl --user enable --now podman.socket
+```
 
 ---
 
 ### Installation (End-User)
 
-Bazzite Architect is distributed as native packages (.deb and .rpm). Download the appropriate package for your distribution from the [Latest Release](https://github.com/Kubaguette/bazzite-architect/releases/latest) and install it:
+#### AppImage
 
-- Debian/Ubuntu (.deb):
+For immutable hosts (Bazzite, Fedora Silverblue, Kinoite, SteamOS), the AppImage is the recommended distribution because it requires no system changes or reboot. It provides the smoothest experience for users who cannot or prefer not to modify the OSTree system image.
 
-```sh
-sudo apt install ./Bazzite-Architect_1.2.0_amd64.deb
+AppImage runs on most distributions without installation:
+```bash
+chmod +x EnvStation-1.0.0.AppImage
+./EnvStation-1.0.0.AppImage
 ```
-
-(Or using dpkg: `sudo dpkg -i Bazzite-Architect_1.2.0_amd64.deb && sudo apt-get install -f`)
-
-- Fedora/RHEL (.rpm):
-
-```sh
-sudo dnf install ./Bazzite-Architect-1.2.0.x86_64.rpm
-```
-
-*Note: Make sure Podman and Distrobox are available on your system (standard on Bazzite).*
-
-- **AppImage option**: You can also choose the AppImage distribution from the Releases page — this is a portable Linux bundle that works across many distributions (Ubuntu, Debian, Arch, SteamOS, etc.) without installation. AppImages are convenient but typically larger than native packages because they bundle runtime dependencies; if download size or disk usage matters, prefer the native .deb or .rpm for your distribution.
+AppImages are portable and convenient but usually larger (they bundle runtimes). Use this if you want to avoid modifying the immutable host or rebooting.
 
 ---
 
+### Other install options
+EnvStation is also distributed as native packages (.deb and .rpm). Choose the option that fits your distro and policy.
+
+#### Debian / Ubuntu (.deb)
+```bash
+# Newer apt supports local .deb install:
+sudo apt update
+sudo apt install ./EnvStation_1.0.0_amd64.deb
+
+# Or with dpkg + fix dependencies:
+sudo dpkg -i EnvStation_1.0.0_amd64.deb
+sudo apt-get install -f
+```
+
+#### Fedora / RHEL Immutable Hosts (Silverblue / Bazzite / Kinoite)
+On OSTree-based immutable systems you cannot use `sudo dnf` to install host packages. Use rpm-ostree and reboot to apply the deployment:
+```bash
+# Install to the immutable OSTree deployment (example):
+sudo rpm-ostree install ./EnvStation-1.0.0.x86_64.rpm
+# A system reboot is required to apply the new deployment
+sudo systemctl reboot
+```
+Notes:
+- rpm-ostree performs an atomic OSTree deployment. The package is staged and becomes active after reboot.
+- If you prefer not to reboot or modify the host image, use the AppImage instead.
+
+#### Fedora / RHEL (traditional, mutable systems)
+If you are on a mutable Fedora/RHEL workstation (not OSTree-based), you can install with dnf:
+```bash
+sudo dnf install ./EnvStation-1.0.0.x86_64.rpm
+```
+
+#### Arch Linux (pkg.tar.zst or AUR)
+Arch users typically install using a package in pacman format or from the AUR if available:
+```bash
+# If you have a built pacman package:
+sudo pacman -U ./envstation-1.0.0-1-x86_64.pkg.tar.zst
+
+# Or install from AUR using an AUR helper (if package published):
+paru -S envstation   # or yay -S envstation
+```
+If no Arch package is available, prefer the AppImage or build from source.
+
+#### Notes:
+- Make sure Podman and Distrobox are installed and working before running EnvStation. EnvStation expects rootless Podman for normal operation.
+- On OSTree-based systems (Silverblue / Bazzite / Kinoite) prefer the AppImage or use rpm-ostree and reboot to install host packages.
+- For RHEL / CentOS you may prefer to use EPEL or the distro's packaging tools to get Podman and its dependencies.
+
+---
+
+### Installing Podman & Distrobox (examples, skip if installed)
+
+#### Fedora / RHEL:
+```bash
+sudo dnf install -y podman distrobox
+systemctl --user enable --now podman.socket
+```
+
+#### Ubuntu / Debian (example: 22.04+):
+```bash
+sudo apt update
+sudo apt install -y podman distrobox
+# If distrobox isn't available on your Ubuntu version, see:
+# https://github.com/89luca89/distrobox or the upstream distrobox README
+```
+
+#### Arch:
+```bash
+sudo pacman -Syu podman distrobox
+systemctl --user enable --now podman.socket
+```
+
+If a distribution does not ship distrobox or a recent Podman, follow the official upstream instructions:
+- Podman: https://podman.io/getting-started/installation
+- Distrobox: https://github.com/89luca89/distrobox
+
+---
 
 ### Installation (developer mode)
 
-Development should run inside a mutable container (Distrobox/toolbox) because the host OS is immutable. Example:
+Development should run inside a mutable container (distrobox/toolbox) because the host OS is immutable. Example:
 
-```sh
-# create or enter your mutable development container
+```bash
+# create or enter a mutable development container
 # distrobox create --name devbox --image registry.fedoraproject.org/fedora-toolbox:latest --yes
 distrobox enter devbox
 ```
 
-1. Clone the repository and install dependencies
-
-```sh
-git clone https://github.com/Kubaguette/bazzite-architect.git
-cd bazzite-architect
+1. Clone and install JS deps
+```bash
+git clone https://github.com/Kubaguette/envstation.git
+cd envstation
 npm install
+```
 
-# On Fedora/Bazzite/Kinoite (and other dnf-based immutable spins) install additional native deps needed
-# for WebKit/Gtk bindings and build tools before running the Tauri build:
+2. Install native dev dependencies (common packages vary by distro)
+
+#### Fedora / Bazzite / Kinoite (dnf)
+```bash
 sudo dnf install -y webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel gtk3-devel gcc gcc-c++ make xdg-utils fuse
 ```
 
-2. Start the unified development workflow
+#### Ubuntu / Debian (apt)
+```bash
+sudo apt update
+sudo apt install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev libgtk-3-dev build-essential xdg-utils fuse
+# package names can vary by Ubuntu version; if a package is missing, search with apt-cache search
+```
 
-```sh
-# Run the unified dev command from the project root
+#### Arch (pacman)
+```bash
+sudo pacman -Syu webkit2gtk libappindicator-gtk3 librsvg gtk3 base-devel xdg-utils fuse
+# Arch package names may differ slightly; use pacman -Ss to confirm exact names
+```
+
+3. Start the unified dev workflow
+```bash
 npm run tauri dev
 ```
 
-Note: npm run tauri dev compiles the Rust backend and starts the Vite dev server together, providing a single, integrated developer loop appropriate for immutable-host workflows. See ARCHITECTURE.md for additional environment caveats (for example, PKG_CONFIG for webkit bindings).
+Notes:
+- `npm run tauri dev` compiles the Rust backend and starts the Vite dev server together. You may need PKG_CONFIG and other env vars for WebKit bindings.
+- If you run into missing headers or pkg-config errors, double-check the dev packages above for your distro and install pkg-config if required.
 
 ---
 
@@ -218,8 +317,8 @@ We welcome contributions that respect the project's architecture and testing bou
 
 ## License
 
-Bazzite Architect is distributed under the GNU General Public License v3.0. See LICENSE for details.
+EnvStation is distributed under the GNU General Public License v3.0. See LICENSE for details.
 
 ---
 
-Built by developers, for the Bazzite community. Aiming for native, frictionless engineering.
+Built by developers, for the Bazzite and whole Linux community. Aiming for native, frictionless engineering.

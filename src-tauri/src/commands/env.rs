@@ -601,7 +601,7 @@ pub async fn delete_environment(
 #[tauri::command]
 pub fn get_environment_manifest(project_path: String) -> Result<EnvironmentManifest, String> {
     use std::fs;
-    let manifest_path = std::path::Path::new(&project_path).join(".bazzite-architect.json");
+    let manifest_path = std::path::Path::new(&project_path).join(".envstation.json");
     let manifest_content = fs::read_to_string(&manifest_path).map_err(|e| {
         format!(
             "Failed to read manifest ({}): {}",
@@ -675,7 +675,7 @@ pub async fn detect_environment_drift(
     use std::fs;
     use std::collections::HashSet;
 
-    let manifest_path = std::path::Path::new(&project_path).join(".bazzite-architect.json");
+    let manifest_path = std::path::Path::new(&project_path).join(".envstation.json");
     let manifest_content = fs::read_to_string(&manifest_path).map_err(|e| {
         format!("Failed to read manifest ({}): {}", manifest_path.display(), e)
     })?;
@@ -975,7 +975,7 @@ pub async fn install_system_package(
 ) -> Result<(), String> {
     use std::fs;
 
-    let manifest_path = std::path::Path::new(&project_path).join(".bazzite-architect.json");
+    let manifest_path = std::path::Path::new(&project_path).join(".envstation.json");
     let manifest_content = fs::read_to_string(&manifest_path).map_err(|e| {
         format!(
             "Failed to read manifest ({}): {}",

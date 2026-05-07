@@ -1,4 +1,4 @@
-# 🏛️ Bazzite Architect: Technical Design Authority
+# 🏛️ EnvStation: Technical Design Authority
 
 ![Rust](https://img.shields.io/badge/backend-Rust_1.80+-orange?style=for-the-badge&logo=rust) ![Tauri](https://img.shields.io/badge/framework-Tauri_V2-24C8D8?style=for-the-badge&logo=tauri) ![React](https://img.shields.io/badge/frontend-React_18-61DAFB?style=for-the-badge&logo=react) ![Linux](https://img.shields.io/badge/platform-Linux_Immutable-E34F26?style=for-the-badge&logo=linux)
 
@@ -28,14 +28,14 @@
 
 ##  1. Introduction & System Overview
 ### 1.1 Executive Summary
-Bazzite Architect is a native, desktop-based environment orchestrator designed specifically for immutable Linux distributions, with a primary focus on Bazzite and Fedora Kinoite. It bridges the gap between host-level containerization (Distrobox/Podman) and IDE-specific isolated environments (VS Code DevContainers). It provides developers with reproducible, zero-friction workspaces without compromising the immutable and atomic nature of the base operating system.
+EnvStation is a native, desktop-based environment orchestrator designed specifically for immutable Linux distributions, with a primary focus on Bazzite and Fedora Kinoite. It bridges the gap between host-level containerization (Distrobox/Podman) and IDE-specific isolated environments (VS Code DevContainers). It provides developers with reproducible, zero-friction workspaces without compromising the immutable and atomic nature of the base operating system.
 
 ### 1.2 The Immutable-OS Problem
 Traditional Linux development relies heavily on host package managers (e.g., `sudo dnf install`). On immutable systems like Bazzite, the root filesystem is read-only to ensure system stability, security, and atomic updates. 
 
 While container technologies exist to bypass this limitation—such as **Distrobox** for terminal/host integration and **DevContainers** for IDE isolation—they operate in strict silos. This fragmentation creates severe UX friction: developers must manually manage storage limits, synchronize dependencies across different container runtimes, and write repetitive boilerplate configurations just to initialize a local project. 
 
-Bazzite Architect abstracts this entire complexity behind a unified, GUI-driven control plane.
+EnvStation abstracts this entire complexity behind a unified, GUI-driven control plane.
 
 ### 1.3 High-Level Architecture Diagram
 The following diagram illustrates how the user interfaces with the application and how the Rust backend orchestrates the underlying system components to mitigate state divergence through targeted synchronization.
@@ -44,7 +44,7 @@ The following diagram illustrates how the user interfaces with the application a
 graph TD
   A[Developer / User] -->|Interacts with| B[React UI]
   B -->|Tauri IPC invoke| C[Rust Backend Orchestrator]
-  C -- Reads/Writes --- D[Manifest: .bazzite-architect.json]
+  C -- Reads/Writes --- D[Manifest: .envstation.json]
   C -->|System calls| E[Podman Engine]
   C -->|Uses CLI| H[Distrobox CLI]
 
@@ -65,11 +65,11 @@ graph TD
 ---
 
 ## 2. System Boundaries & Non-Goals
-To maintain a focused, maintainable, and reliable architecture, it is crucial to define the explicit boundaries of the Bazzite Architect orchestrator. The following are conscious "non-goals" for this project:
+To maintain a focused, maintainable, and reliable architecture, it is crucial to define the explicit boundaries of the EnvStation orchestrator. The following are conscious "non-goals" for this project:
 
-* **Not a Language Package Manager:** Bazzite Architect strictly manages *system-level* dependencies (e.g., `gcc`, `openssl-devel`, `htop`). It does not attempt to wrap or manage language-specific package managers like `npm`, `pip`, or `cargo`. Language dependencies are naturally synchronized because both the Distrobox container and the DevContainer mount the exact same host workspace directory.
-* **Not a DevContainer Replacement:** The project does not aim to reinvent the wheel regarding IDE isolation. Bazzite Architect does not replace the `devcontainer.json` specification or the VS Code Dev Containers extension. Instead, it acts as a higher-level orchestrator that *scaffolds* these configurations and ensures they remain aligned with the host's Distrobox state.
-* **Not a Universal Multi-Distro Tool (in V1.0):** While containerization is technically agnostic, the current sync-engine is deeply optimized for Fedora-based images (specifically utilizing the `dnf` package manager), mirroring the Bazzite/Kinoite host. Supporting Debian (`apt`) or Alpine (`apk`) target containers is explicitly out of scope for the MVP to reduce state-management complexity.
+* **Not a Language Package Manager:** EnvStation strictly manages *system-level* dependencies (e.g., `gcc`, `openssl-devel`, `htop`). It does not attempt to wrap or manage language-specific package managers like `npm`, `pip`, or `cargo`. Language dependencies are naturally synchronized because both the Distrobox container and the DevContainer mount the exact same host workspace directory.
+* **Not a DevContainer Replacement:** The project does not aim to reinvent the wheel regarding IDE isolation. EnvStation does not replace the `devcontainer.json` specification or the VS Code Dev Containers extension. Instead, it acts as a higher-level orchestrator that *scaffolds* these configurations and ensures they remain aligned with the host's Distrobox state.
+* **Not a Universal Multi-Distro Tool (initially):** While containerization is technically agnostic, the sync engine was originally deeply optimized for Fedora-based images (specifically utilizing the `dnf` package manager) to mirror the Bazzite/Kinoite host. Support for Debian (`apt`) and Alpine (`apk`) target containers has since been added: the backend now detects package managers dynamically and performs live installs and drift detection for `apt`/`apk` where appropriate (see the machine-readable package queries and dynamic package manager detection in the changelog). Supporting these runtimes was intentionally deferred during early MVP work to reduce scope, but the current codebase implements first-class support for them.
 * **Not a General-Purpose Podman GUI:** The application does not provide screens to manage arbitrary Dockerfiles, custom image registries, or network bridges. It remains laser-focused on the *development environment* lifecycle.
 
 
@@ -79,12 +79,12 @@ To maintain a focused, maintainable, and reliable architecture, it is crucial to
 The architecture is built on a modern, decoupled stack, carefully chosen to prioritize native system performance, low resource footprint, and deep OS integration.
 
 ### 3.1 Core Technologies
-* **Backend / Orchestrator (Rust & Tauri):** Instead of relying on heavy Electron runtimes, Bazzite Architect utilizes Tauri. The Rust backend provides the low-level, memory-safe system access required to safely execute asynchronous OS commands (interfacing with Podman and Distrobox) while maintaining a negligible background footprint.
+* **Backend / Orchestrator (Rust & Tauri):** Instead of relying on heavy Electron runtimes, EnvStation utilizes Tauri. The Rust backend provides the low-level, memory-safe system access required to safely execute asynchronous OS commands (interfacing with Podman and Distrobox) while maintaining a negligible background footprint.
 * **Frontend (React):** A declarative React frontend handles the complex state of multiple environments, storage scans, and real-time notifications/logs.
-* **Container Runtimes (Podman & Distrobox):** The application leverages the native container tools pre-installed on Bazzite. Podman runs rootless containers, ensuring security, while Distrobox tightly integrates those containers with the host OS (e.g., exporting binaries to the host application menu). VS Code DevContainers are orchestrated by the VS Code Dev Containers extension; Bazzite Architect scaffolds the .devcontainer configuration and launches VS Code but does not manage the DevContainer lifecycle directly.
+* **Container Runtimes (Podman & Distrobox):** The application leverages the native container tools pre-installed on Bazzite. Podman runs rootless containers, ensuring security, while Distrobox tightly integrates those containers with the host OS (e.g., exporting binaries to the host application menu). VS Code DevContainers are orchestrated by the VS Code Dev Containers extension; EnvStation scaffolds the .devcontainer configuration and launches VS Code but does not manage the DevContainer lifecycle directly.
 
 ### 3.2 OS-Native Design (UX/UI)
-A key architectural principle of Bazzite Architect is that it should feel like a first-class citizen of the operating system, not a web wrapper. The UI is custom-built, drawing heavy inspiration from the **GNOME/Libadwaita** design language. This ensures visual consistency with the native Bazzite desktop environment, providing users with familiar paradigms, dark mode support, and native-feeling popovers and modals.
+A key architectural principle of EnvStation is that it should feel like a first-class citizen of the operating system, not a web wrapper. The UI is custom-built, drawing heavy inspiration from the **GNOME/Libadwaita** design language. This ensures visual consistency with the native Bazzite desktop environment, providing users with familiar paradigms, dark mode support, and native-feeling popovers and modals.
 
 ### 3.3 The Communication Layer (IPC)
 The system strictly separates presentation from execution. The React frontend has zero direct access to the filesystem or the operating system. 
@@ -95,21 +95,21 @@ All interactions between the UI and the host OS happen via **Tauri's Inter-Proce
 
 ## 4. Core Concepts & Scaffolding
 
-At the heart of Bazzite Architect is the concept of an "Environment." Rather than treating containers, project directories, and IDE configurations as separate, disjointed entities, the system unifies them into a single, cohesive unit.
+At the heart of EnvStation is the concept of an "Environment." Rather than treating containers, project directories, and IDE configurations as separate, disjointed entities, the system unifies them into a single, cohesive unit.
 
 ### 4.1 The "Environment" Entity
-An Environment in Bazzite Architect consists of four tightly coupled layers:
+An Environment in EnvStation consists of four tightly coupled layers:
 1. **The Host Workspace:** A local directory residing on the user's actual filesystem (e.g., `~/Projects/Python_Project`). This ensures code is never trapped inside a container volume and remains accessible to host GUI tools.
 2. **The Distrobox Container:** A rootless container created via `distrobox create` (using a Fedora toolbox base), optionally with an environment-specific home mount and an initial setup snippet to install baseline tools.
 3. **The DevContainer Configuration:** An automatically generated `.devcontainer` folder containing the `devcontainer.json` file. This defines the IDE container image, postCreate steps where applicable, and recommended extensions.
-4. **The Synchronization Manifest:** The `.bazzite-architect.json` file, which acts as the single source of truth for required system-level packages (MVP: `system_packages`).
+4. **The Synchronization Manifest:** The `.envstation.json` file, which acts as the single source of truth for required system-level packages (MVP: `system_packages`).
 
 ### 4.2 Project Scaffolding & Templates
-To eliminate boilerplate configuration, Bazzite Architect provides an automated templating engine. When a user creates a new environment, the Rust backend executes a deterministic scaffolding sequence:
+To eliminate boilerplate configuration, EnvStation provides an automated templating engine. When a user creates a new environment, the Rust backend executes a deterministic scaffolding sequence:
 * Provisions the host project directory (and an environment-specific home mount if requested).
 * Creates language-specific project scaffolding (e.g., README, minimal source files, build config) and `.vscode/extensions.json`.
 * Generates `.devcontainer/devcontainer.json` with a Fedora-based image and, where applicable, a `postCreateCommand` (e.g., `dnf install ...`) and recommended extensions.
-* Initializes the `.bazzite-architect.json` manifest (MVP tracks `system_packages`).
+* Initializes the `.envstation.json` manifest (MVP tracks `system_packages`).
 
 Note: The orchestrator now guarantees minimal baseline toolchain/project files are created during scaffolding (for example: `requirements.txt` for Python, `package.json` for Node/React, `Cargo.toml` for Rust, `CMakeLists.txt` for C/C++, `pom.xml` for Java, and `*.csproj` for C#). This prevents DevContainer `postCreateCommand` steps from failing on initial open due to missing files.
 
@@ -126,7 +126,7 @@ A new explicit "Open" control offers users two distinct runtime entry points for
   - Open in VS Code: launches VS Code attached to the generated DevContainer (`devcontainer` flow). The DevContainer lifecycle is preserved (build/rebuild, postCreate/postStart hooks apply). Long-running system package installs should be deferred to postStart so they do not block agent attach.
 
 - Architectural implications
-  - Single Source of Truth: both entry paths read/write the same manifest (.bazzite-architect.json). The manifest controls desired system packages; a change in the Terminal path triggers a live Distrobox install and appends the required steps to the DevContainer hooks so parity is achieved on the next container rebuild.
+  - Single Source of Truth: both entry paths read/write the same manifest (.envstation.json). The manifest controls desired system packages; a change in the Terminal path triggers a live Distrobox install and appends the required steps to the DevContainer hooks so parity is achieved on the next container rebuild.
   - Provisioning guarantees: "Open in Terminal" is suitable when a developer needs immediate CLI access (fast feedback). "Open in VS Code" is the canonical path for IDE-attached workflows; it must preserve the agent startup semantics described in Section 4.x (move heavy installs to postStart).
   - Sync visibility: when a live package install is performed via the Terminal path, the UI shows a structured progress/log stream and marks the manifest/devcontainer.json as modified so the user understands the eventual DevContainer rebuild requirement.
 
@@ -194,9 +194,9 @@ Without orchestration, these universes drift quickly. Typical symptoms include:
 - Configuration drift: Diverging repos/flags/env setup across the two worlds.
 - Temporary "hotfix" installs: Manually installed via shell, not documented, and lost on the next rebuild.
 
-Bazzite Architect addresses this divergence by centralizing all system packages and relevant sync steps through a Sync Engine, recorded in the manifest. In the current MVP, manual, ad-hoc in-container changes are not auto-detected; reconciliation/adoption flows are planned.
+EnvStation addresses this divergence by centralizing all system packages and relevant sync steps through a Sync Engine, recorded in the manifest. In the current MVP, manual, ad-hoc in-container changes are not auto-detected; reconciliation/adoption flows are planned.
 
-### 5.2 The .bazzite-architect.json Manifest as Single Source of Truth
+### 5.2 The .envstation.json Manifest as Single Source of Truth
 The manifest is the sole authoritative source for the desired target state of system-wide dependencies in an environment.
 
 MVP schema (simplified):
@@ -287,7 +287,7 @@ To robustly detect and surface user-installed packages that diverge between the 
 
     1. Collect the Current Packages from the running container (primary→fallback).
     2. Read the Baseline Packages from `~/.bazzite/base_packages.txt` (recorded at create-time).
-    3. Read the Manifest Packages from `.bazzite-architect.json` (the single source of truth).
+    3. Read the Manifest Packages from `.envstation.json` (the single source of truth).
 
     The computed drift is:
 
@@ -312,7 +312,7 @@ This reconciliation strategy provides a practical, low-noise drift detector that
 
 ## 6. Storage Orchestration & Resource Management
 
-On handhelds and other Bazzite installations with constrained root SSDs, rootless Podman’s default storage location (GraphRoot) quickly accumulates container images and writable layers. Without explicit control, this bloats the primary partition, potentially causing system degradation or atomic update failures. Bazzite Architect provides a guided, safe mechanism to relocate Podman’s per-user storage to a developer-chosen drive, keeping the immutable system lean.
+On handhelds and other Bazzite installations with constrained root SSDs, rootless Podman’s default storage location (GraphRoot) quickly accumulates container images and writable layers. Without explicit control, this bloats the primary partition, potentially causing system degradation or atomic update failures. EnvStation provides a guided, safe mechanism to relocate Podman’s per-user storage to a developer-chosen drive, keeping the immutable system lean.
 
 ### 6.1 Configuration & State Management
 When a user allocates a new storage location, the orchestrator performs a controlled reconfiguration of the container engine without requiring elevated privileges:
@@ -380,7 +380,7 @@ Drive scanning and configuration are designed to be resilient against missing pa
 
 ## 7. Performance & I/O Optimization
 
-A critical challenge on immutable desktop systems and handheld devices is maintaining a hyper-responsive UI while inspecting massive, deeply nested project trees (e.g., `node_modules` or Rust `target` directories). Naive directory traversal can lead to severe I/O spikes, SSD saturation, and UI thread blocking. Bazzite Architect mitigates these risks through a meticulously tuned, multi-layered I/O orchestration strategy.
+A critical challenge on immutable desktop systems and handheld devices is maintaining a hyper-responsive UI while inspecting massive, deeply nested project trees (e.g., `node_modules` or Rust `target` directories). Naive directory traversal can lead to severe I/O spikes, SSD saturation, and UI thread blocking. EnvStation mitigates these risks through a meticulously tuned, multi-layered I/O orchestration strategy.
 
 ### 7.1 Bounded Parallelism & Async Offloading
 To balance throughput with I/O pressure, the architecture explicitly rejects both purely sequential walks (which incur unacceptable latency) and unbounded parallel walks (which saturate the kernel I/O scheduler and trigger thermal throttling on handhelds).
@@ -523,7 +523,7 @@ This chapter outlines how failures are detected and surfaced, and how the backen
 ### 8.1 What happens when things break?
 
 - Manifest errors:
-  - Reading/parsing: get_environment_manifest and install_system_package return explicit errors if .bazzite-architect.json cannot be read or parsed. There is no automatic repair of malformed manifests.
+  - Reading/parsing: get_environment_manifest and install_system_package return explicit errors if .envstation.json cannot be read or parsed. There is no automatic repair of malformed manifests.
   - Write failures: install_system_package aborts with a clear error if it cannot serialize or write the updated manifest.
 - DevContainer configuration errors:
   - Reading/parsing/writing .devcontainer/devcontainer.json is validated in install_system_package. Any failure aborts before the live install step and returns the error as-is.
@@ -610,12 +610,12 @@ sequenceDiagram
 
 ## 9. Security & Isolation
 
-This chapter explains how Bazzite Architect achieves *least privilege* on the host while still enabling highly integrated developer workflows.
+This chapter explains how EnvStation achieves *least privilege* on the host while still enabling highly integrated developer workflows.
 
 > 🛡️ **Security Constraint:** Rootless containers significantly reduce the blast radius of user errors and misconfigurations, but they are *not* a perfect sandbox against a malicious project. If you open an untrusted repository, its `postCreateCommand`, build scripts, or dependency install steps can still read/write any paths explicitly mounted into the container.
 
 ### 9.1 Rootless Podman & User Space Execution
-Bazzite Architect is designed to operate entirely within user space on the host, avoiding systemic risk to the immutable OS.
+EnvStation is designed to operate entirely within user space on the host, avoiding systemic risk to the immutable OS.
 
 * **User-Scoped Lifecycle:** All container operations (`distrobox create/enter/stop/rm`) are executed as the current user. There are zero host-side `sudo` invocations required to manage environments.
 * **Non-Destructive Storage:** Storage relocation writes exclusively to `~/.config/containers/storage.conf` and restarts Podman via `systemctl --user`. This strictly avoids touching system-level `/etc` configurations and requires no administrator privileges.
@@ -631,7 +631,7 @@ Bazzite Architect is designed to operate entirely within user space on the host,
 Distrobox environments are intentionally integrated with the host system. The primary integration vector is bind-mounting a "home" directory into the container.
 
 **The Implementation Reality:**
-* **Environment Isolation:** By default, Bazzite Architect generates an environment-specific directory (`$HOME/<env_name>`). This is a deliberate isolation choice, providing a "home-like" directory without exposing the user's actual host `$HOME`.
+* **Environment Isolation:** By default, EnvStation generates an environment-specific directory (`$HOME/<env_name>`). This is a deliberate isolation choice, providing a "home-like" directory without exposing the user's actual host `$HOME`.
 * **Custom Mounts:** If a custom `homeMount` is provided, the backend validates it as an absolute directory path but does *not* artificially restrict it from pointing to sensitive subdirectories.
 
 **Why Mounting the Host `$HOME` is Risky:**
@@ -650,7 +650,7 @@ Distrobox environments are intentionally integrated with the host system. The pr
 
 ## 10. Project Structure & Code Guide
 
-This chapter documents the modular layout of the Bazzite Architect workspace. It serves as a guide for contributors to ensure that new features adhere to the established separation of concerns and architectural boundaries.
+This chapter documents the modular layout of the EnvStation workspace. It serves as a guide for contributors to ensure that new features adhere to the established separation of concerns and architectural boundaries.
 
 
 ### 10.1 The Core-Command-View Pattern
@@ -725,12 +725,12 @@ While not strictly part of the core application binary, the continuous integrati
 
 - Continuous Integration (CI): All Pull Requests targeting the main branch are gated by a mandatory ci-build job. This job provisions an Ubuntu runner with the required GTK/WebKit dependencies and executes both frontend builds (npm run build) and backend validation (cargo check). Code cannot be merged unless this pipeline passes, ensuring the main branch remains permanently stable.
 
-- Continuous Deployment (CD): The project utilizes a tag-driven release architecture. Pushing a semantic version tag (e.g., v1.2.0) triggers a dedicated release job. Using tauri-action, the pipeline automatically compiles the native Linux binaries and bundles them into distributable packages (.deb, .rpm, and AppImage), publishing them directly as a GitHub Release draft.
+- Continuous Deployment (CD): The project utilizes a tag-driven release architecture. Pushing a semantic version tag (e.g., v1.0.0) triggers a dedicated release job. Using tauri-action, the pipeline automatically compiles the native Linux binaries and bundles them into distributable packages (.deb, .rpm, and AppImage), publishing them directly as a GitHub Release draft.
 
   AppImage specifics:
   - AppImage target: The CI builds an AppImage artifact alongside native packages so users can run a portable single-file bundle on many Linux distributions without installation.
   - BuildRunner: the AppImage is built on a Linux runner (Ubuntu) using the same tauri-action bundle step (target: appimage) or the AppImage toolchain as required by the packaging step.
-  - Artifact naming and metadata: artifacts follow the pattern Bazzite-Architect-<version>-<arch>.<ext> (for example: Bazzite-Architect-1.2.0-x86_64.AppImage). The pipeline generates checksums (SHA256) and signs artifacts (GPG) when signing keys are available in the secrets store.
+  - Artifact naming and metadata: artifacts follow the pattern envstation-<version>-<arch>.<ext> (for example: envstation-1.0.0-x86_64.AppImage). The pipeline generates checksums (SHA256) and signs artifacts (GPG) when signing keys are available in the secrets store.
   - Release behavior: the workflow attaches the AppImage to the GitHub Release draft in addition to .deb and .rpm. Optionally, the pipeline can create a signed, versioned download URL and publish release notes with the checksum table.
   - Reproducibility & runners: AppImage builds are best executed on a clean Linux runner; if deterministic builds are a priority, consider using an isolated builder (e.g., a reproducible CI image) and pinning the toolchain versions.
 

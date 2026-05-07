@@ -11,12 +11,14 @@
 
 import { useEffect, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import EnvLogo from "../../git_src/assets/EnvStation.svg";
 
-const REPO_URL = "https://github.com/Kubaguette/bazzite-architect";
+const REPO_URL = "https://github.com/Kubaguette/envstation";
 
 export default function AboutModal({ onClose }: { onClose: () => void }) {
   const [show, setShow] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [spinning, setSpinning] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") startClose(); };
@@ -35,6 +37,14 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const onLogoClick = () => {
+    // brief spin easter egg: ignore while spinning
+    if (spinning) return;
+    setSpinning(true);
+    // clear spinning state after animation completes (match CSS duration)
+    setTimeout(() => setSpinning(false), 720);
+  };
+
   const startClose = () => {
     if (closing) return;
     setClosing(true);
@@ -45,10 +55,11 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
   return (
     <div className={`modal-backdrop ${show ? "show" : ""} ${closing ? "closing" : ""}`} onClick={startClose} data-tauri-drag-region="none">
       <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="about-title" onClick={(e) => e.stopPropagation()}>
-        <header id="about-title">About Bazzite Architect</header>
+        <header id="about-title">About EnvStation</header>
         <div className="body">
-          <p>Bazzite Architect – Portable Dev Environments.</p>
-          <p>Version: 1.2.0</p>
+          <img src={EnvLogo} alt="EnvStation logo" className={`about-logo ${spinning ? "spin" : ""}`} draggable={false} onClick={onLogoClick} data-tauri-drag-region="none" title="Click me!" />
+          <p>EnvStation – Portable Dev Environments.</p>
+          <p>Version: 1.0.0</p>
           <p>License & contributors are listed in the project repository.</p>
         </div>
         <div className="footer">

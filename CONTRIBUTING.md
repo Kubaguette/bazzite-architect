@@ -1,6 +1,6 @@
 # CONTRIBUTING.md
 
-Thank you for wanting to contribute to Bazzite Architect! This document explains how to submit contributions, which technical guardrails apply, and what the development workflow looks like.
+Thank you for wanting to contribute to EnvStation! This document explains how to submit contributions, which technical guardrails apply, and what the development workflow looks like.
 
 ## Welcome
 
@@ -29,8 +29,8 @@ distrobox enter devbox
 - Clone the repository and install JS dependencies:
 
 ```bash CONTRIBUTING.md
-git clone https://github.com/Kubaguette/bazzite-architect.git
-cd bazzite-architect
+git clone https://github.com/Kubaguette/envstation.git
+cd envstation
 npm install
 ```
 
@@ -145,4 +145,4 @@ Merge process:
 - If in doubt: open an issue and tag it as "design discussion" or "help wanted".
 - For security-sensitive vulnerabilities: report them confidentially via the repository's designated contact channels.
 
-Thank you for contributing to Bazzite Architect! Your care helps us build a secure, maintainable and reliable tool for development environments on Bazzite/Fedora Atomic.
+Thank you for contributing to EnvStation! Your care helps us build a secure, maintainable and reliable tool for development environments on Bazzite/Fedora Atomic.

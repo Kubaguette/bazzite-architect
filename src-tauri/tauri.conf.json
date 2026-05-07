@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "bazzite-architect",
-  "version": "1.2.0",
-  "identifier": "com.kubaguette.bazzite-architect",
+  "productName": "EnvStation",
+  "version": "1.0.0",
+  "identifier": "com.kubaguette.envstation",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "bazzite-architect",
+        "title": "EnvStation",
         "width": 1000,
         "height": 700,
         "minWidth": 900,

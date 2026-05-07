@@ -16,7 +16,7 @@ All notable changes to this project will be documented in this file.
   - Fallbacks emit a `fallback_used` flag returned by `detect_environment_drift` so the UI can warn users when a conservative fallback was necessary.
 - Manifest normalization and seeding:
   - Manifest package entries are normalized (trimmed and lowercased) on creation and when updating, preventing case/whitespace mismatch drift.
-  - Environment templates now seed `.bazzite-architect.json` with template base packages so newly scaffolded projects have zero day‑one drift.
+  - Environment templates now seed `.envstation.json` with template base packages so newly scaffolded projects have zero day‑one drift.
 - DevContainer scaffolding derived from manifest:
   - `devcontainer.json` postStartCommand content is built from the manifest (not hardcoded), ensuring DevContainer hooks align with the manifest.
 - Frontend improvements:
@@ -33,14 +33,14 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [1.2.0] - 2026-05-04
+## [1.0.0] - 2026-05-04
 
 ### Added
 - C# / .NET scaffolding: minimal Program.cs and project file targeting .NET 8.0. Generated DevContainer and Distrobox scaffolds use the official .NET SDK image and recommend the VS Code C# extensions.
 - Dynamic package manager detection: the backend probes the target environment and picks the appropriate package manager (dnf/apt/apk/pacman, etc.) when performing live installs.
 
 ### Changed
-- Bumped application/package versions to 1.2.0 across package.json, src-tauri/tauri.conf.json, and displayed About modal.
+- Bumped application/package versions to 1.0.0 across package.json, src-tauri/tauri.conf.json, and displayed About modal.
 - Updated README installation examples and CI/CD example in ARCHITECTURE.md.
 
 ### Notes

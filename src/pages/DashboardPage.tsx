@@ -39,7 +39,7 @@ export default function DashboardPage() {
       csharp: "CSharp_Project",
     };
     const suggestedName = nameMap[t];
-    const home = `$HOME/BazziteArchitect/Projects/${suggestedName}`; // will be expanded by the backend
+    const home = `$HOME/EnvStation/Projects/${suggestedName}`; // will be expanded by the backend
     setDefaults({ template: t, name: suggestedName, home });
     setShowCreate(true);
   };

@@ -14,8 +14,8 @@
 import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
-const DOC_URL = "https://github.com/Kubaguette/bazzite-architect/blob/main/ARCHITECTURE.md";
-const BUG_URL = "https://github.com/Kubaguette/bazzite-architect/issues";
+const DOC_URL = "https://github.com/Kubaguette/envstation/blob/main/ARCHITECTURE.md";
+const BUG_URL = "https://github.com/Kubaguette/envstation/issues";
 
 export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
   // 'open' represents logical open state; 'mounted' controls DOM presence to allow exit animation
@@ -129,7 +129,7 @@ export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
           <div className="menu-divider" role="separator" />
           <button className="menu-item" role="menuitem" onClick={() => onSelect("about")} data-tauri-drag-region="none">
             <span className="icon" aria-hidden>ℹ️</span>
-            <span className="text">About Bazzite Architect</span>
+            <span className="text">About EnvStation</span>
           </button>
         </div>
       )}

@@ -25,5 +25,5 @@ fn main() {
         }
     }
 
-    bazzite_architect_lib::run()
+    envstation_lib::run()
 }

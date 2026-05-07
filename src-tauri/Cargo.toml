@@ -1,7 +1,7 @@
 [package]
-name = "bazzite-architect"
-version = "1.2.0"
-description = "Bazzite Architect"
+name = "envstation"
+version = "1.0.0"
+description = "EnvStation"
 authors = ["Kubaguette"]
 license = "GPL-3.0-or-later"
 edition = "2021"
@@ -12,7 +12,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "bazzite_architect_lib"
+name = "envstation_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
