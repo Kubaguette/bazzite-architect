@@ -156,14 +156,7 @@ systemctl --user enable --now podman.socket
 
 #### AppImage
 
-For immutable hosts (Bazzite, Fedora Silverblue, Kinoite, SteamOS), the AppImage is the recommended distribution because it requires no system changes or reboot. It provides the smoothest experience for users who cannot or prefer not to modify the OSTree system image.
-
-AppImage runs on most distributions without installation:
-```bash
-chmod +x EnvStation-1.0.0.AppImage
-./EnvStation-1.0.0.AppImage
-```
-AppImages are portable and convenient but usually larger (they bundle runtimes). Use this if you want to avoid modifying the immutable host or rebooting.
+Comming soon.
 
 ---
 
