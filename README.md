@@ -21,7 +21,7 @@
 
 # EnvStation
 
-A lightweight tool to create reproducible development environments on immutable Linux distributions (Bazzite / Fedora / Arch — and more).
+The missing Control Center for reproducible environments using [Distrobox](https://github.com/89luca89/distrobox) and [Devcontainers](https://containers.dev/).
 
 ---
 
@@ -29,13 +29,13 @@ A lightweight tool to create reproducible development environments on immutable 
 
 ![EnvStation Demo](git_src/assets/final_cut.webp)
 
-*Creating a full Python environment and launching VS Code **in under 90 seconds** — UI remains fully responsive. Waiting time skipped in clip.*
+*Creating a full Python environment and launching VS Code **in under 90 seconds** on Bazzite — UI remains fully responsive. Waiting time skipped in clip.*
 
 ---
 
 ## Introduction
 
-**EnvStation** is a lightweight desktop application designed to simplify and synchronize development environments on immutable Linux distributions. 
+**EnvStation** is a lightweight, distro-agnostic desktop application designed to simplify and synchronize development environments on immutable Linux distributions. 
 
 Built with a **Rust** backend and a **React/Tauri** frontend, it seamlessly manages the interplay between **Distrobox** and **DevContainers**. By utilizing a single manifest as the "source of truth," EnvStation ensures your host terminal and IDE environment remain perfectly aligned—all while respecting the architectural constraints of a read-only root filesystem.
 
