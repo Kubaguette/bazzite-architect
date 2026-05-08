@@ -73,11 +73,9 @@ pub fn open_in_vscode(app: tauri::AppHandle, name: String) -> Result<String, Str
                     }
                 }
             }
-            if findmnt_src_path.is_empty() {
-                if out_s.starts_with('/') {
+            if findmnt_src_path.is_empty() && out_s.starts_with('/') {
                     findmnt_src_path = out_s;
                 }
-            }
         }
     } else if let Err(e) = &findmnt_out {
         dbg.push_str(&format!("findmnt call error: {}\n", e));
@@ -163,8 +161,7 @@ pub fn open_in_vscode(app: tauri::AppHandle, name: String) -> Result<String, Str
     } else if !inspect_src.is_empty() {
         host_home_candidate = inspect_src.clone();
         dbg.push_str(&format!("candidate=inspect -> {}\n", host_home_candidate));
-    } else if container_home.starts_with("/home/") {
-        let suffix = &container_home["/home/".len()..];
+    } else if let Some(suffix) = container_home.strip_prefix("/home/") {
         host_home_candidate = format!("/var/home/{}", suffix);
         dbg.push_str(&format!(
             "candidate=mapped /var/home -> {}\n",
@@ -234,8 +231,7 @@ pub fn open_in_vscode(app: tauri::AppHandle, name: String) -> Result<String, Str
                 "flatpak apps detected: code={} codium={}\n",
                 has_code, has_codium
             ));
-            if has_code {
-                if try_spawn(
+            if has_code && try_spawn(
                     "flatpak",
                     &["run", "com.visualstudio.code", "--new-window", &target_path],
                 ) {
@@ -263,9 +259,7 @@ pub fn open_in_vscode(app: tauri::AppHandle, name: String) -> Result<String, Str
                         return Ok(msg);
                     }
                 }
-            }
-            if has_codium {
-                if try_spawn(
+            if has_codium && try_spawn(
                     "flatpak",
                     &["run", "com.vscodium.codium", "--new-window", &target_path],
                 ) {
@@ -279,7 +273,6 @@ pub fn open_in_vscode(app: tauri::AppHandle, name: String) -> Result<String, Str
                         return Ok(msg);
                     }
                 }
-            }
         }
     }
 
@@ -290,19 +283,17 @@ pub fn open_in_vscode(app: tauri::AppHandle, name: String) -> Result<String, Str
         .map(|s| s.success())
         .unwrap_or(false);
     dbg.push_str(&format!("which code -> {}\n", which_code));
-    if which_code {
-        if try_spawn("code", &["-n", &target_path]) {
-            {
-                let msg = format!("VS Code started: {}\n\nDEBUG\n{}", target_path, dbg);
-                logs::info(
-                    &app,
-                    "vscode",
-                    format!("open_in_vscode ok -> {}", target_path),
-                );
-                return Ok(msg);
+    if which_code && try_spawn("code", &["-n", &target_path]) {
+                {
+                    let msg = format!("VS Code started: {}\n\nDEBUG\n{}", target_path, dbg);
+                    logs::info(
+                        &app,
+                        "vscode",
+                        format!("open_in_vscode ok -> {}", target_path),
+                    );
+                    return Ok(msg);
+                }
             }
-        }
-    }
 
     let which_codium = build_host_command("sh")
         .args(["-lc", "command -v codium >/dev/null 2>&1"])
@@ -311,19 +302,17 @@ pub fn open_in_vscode(app: tauri::AppHandle, name: String) -> Result<String, Str
         .map(|s| s.success())
         .unwrap_or(false);
     dbg.push_str(&format!("which codium -> {}\n", which_codium));
-    if which_codium {
-        if try_spawn("codium", &["-n", &target_path]) {
-            {
-                let msg = format!("VS Code started: {}\n\nDEBUG\n{}", target_path, dbg);
-                logs::info(
-                    &app,
-                    "vscode",
-                    format!("open_in_vscode ok -> {}", target_path),
-                );
-                return Ok(msg);
+    if which_codium && try_spawn("codium", &["-n", &target_path]) {
+                {
+                    let msg = format!("VS Code started: {}\n\nDEBUG\n{}", target_path, dbg);
+                    logs::info(
+                        &app,
+                        "vscode",
+                        format!("open_in_vscode ok -> {}", target_path),
+                    );
+                    return Ok(msg);
+                }
             }
-        }
-    }
 
     let err = format!(
         "Could not start VS Code. {}\n\nDEBUG\n{}\nLauncher last error: {:?}",

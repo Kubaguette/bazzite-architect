@@ -202,7 +202,7 @@ pub async fn create_environment(
             }
         };
 
-        match environment::create_environment(params, |update| emit_progress(update)).await {
+        match environment::create_environment(params, emit_progress).await {
             Ok(result) => {
                 let payload = ProgressPayload::completion(
                     "complete",
@@ -308,8 +308,7 @@ pub fn resolve_host_project_path(env_name: &str) -> Option<String> {
         return Some(findmnt_src_path);
     }
 
-    if container_home.starts_with("/home/") {
-        let suffix = &container_home["/home/".len()..];
+    if let Some(suffix) = container_home.strip_prefix("/home/") {
         let candidate = format!("/var/home/{}", suffix);
         if std::path::Path::new(&candidate).exists() {
             return Some(candidate);
@@ -559,7 +558,7 @@ pub async fn delete_environment(
         let p = std::path::Path::new(&pp);
         if p.exists() && p.is_dir() {
             let home = std::env::var("HOME").unwrap_or_else(|_| String::from("/home"));
-            let home_candidates = vec![
+            let home_candidates = [
                 String::from("/home"),
                 String::from("/var/home"),
                 home.clone(),
@@ -569,7 +568,7 @@ pub async fn delete_environment(
             let looks_like_project = p.join(".devcontainer").join("devcontainer.json").exists();
 
             if !is_dangerous && looks_like_project {
-                if let Err(e) = std::fs::remove_dir_all(&p) {
+                if let Err(e) = std::fs::remove_dir_all(p) {
                     extra.push_str(&format!("\n⚠️ Project folder could not be deleted: {} ({})", pp, e));
                 } else {
                     extra.push_str(&format!("\n🧹 Project folder deleted: {}", pp));

@@ -59,14 +59,14 @@ pub fn open_in_terminal(app: tauri::AppHandle, env_name: String) -> Result<Strin
                 cmd.arg("--");
                 cmd.arg("bash");
                 cmd.arg("-lc");
-                cmd.arg(&format!("distrobox enter {}", escaped));
+                cmd.arg(format!("distrobox enter {}", escaped));
             }
             "konsole" => {
                 // konsole uses -e to execute a command
                 cmd.arg("-e");
                 cmd.arg("bash");
                 cmd.arg("-lc");
-                cmd.arg(&format!("distrobox enter {}", escaped));
+                cmd.arg(format!("distrobox enter {}", escaped));
             }
             _ => {}
         }
@@ -75,8 +75,8 @@ pub fn open_in_terminal(app: tauri::AppHandle, env_name: String) -> Result<Strin
         // from the parent and can continue after parent exits.
         let devnull = OpenOptions::new().read(true).write(true).open("/dev/null");
         if let Ok(f) = devnull {
-            let stdin = Stdio::from(f.try_clone().unwrap_or_else(|_| f.try_clone().unwrap()));
-            let stdout = Stdio::from(f.try_clone().unwrap_or_else(|_| f.try_clone().unwrap()));
+            let stdin = Stdio::from(f.try_clone().expect("Cloning /dev/null file descriptor should succeed: file was just opened successfully and is a regular fd"));
+            let stdout = Stdio::from(f.try_clone().expect("Cloning /dev/null file descriptor should succeed: file was just opened successfully and is a regular fd"));
             let stderr = Stdio::from(f);
             cmd.stdin(stdin).stdout(stdout).stderr(stderr);
         }

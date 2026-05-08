@@ -97,7 +97,7 @@ fn load_cache(app: &tauri::AppHandle) {
         // the problem by unwrapping. If poisoned-recovery is required later,
         // replace unwrap() with lock().unwrap_or_else(|g| g.into_inner()).
         .lock()
-        .unwrap();
+        .expect("SIZE_CACHE mutex lock failed: mutex was initialized in OnceLock during first access (single-threaded); a poisoned mutex would indicate a prior panic while holding the lock") ;
     if cache.file.is_some() {
         return;
     }
