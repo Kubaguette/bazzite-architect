@@ -90,7 +90,7 @@ fn ensure_cache_file(app: &tauri::AppHandle) -> PathBuf {
 fn load_cache(app: &tauri::AppHandle) {
     let mut cache = SIZE_CACHE
         .get_or_init(|| Mutex::new(SizeCache::default()))
-        // SAFETY: this mutex is initialized above in a single-threaded fashion on
+        // INVARIANT: this mutex is initialized above in a single-threaded fashion on
         // first access. Locking may panic only if the mutex is poisoned due to a
         // thread panic while holding it; in this process-level cache that would
         // indicate a serious internal error and it is acceptable to propagate

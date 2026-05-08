@@ -92,7 +92,7 @@ pub fn run() {
             Ok(())
         });
 
-    // SAFETY: run() returns a Result which will only be Err on startup failure
+    // INVARIANT: run() returns a Result which will only be Err on startup failure
     // (invalid configuration or platform support issues). It is appropriate to
     // treat failure to run the application as fatal at this point and surface a
     // clear message for diagnostic purposes.

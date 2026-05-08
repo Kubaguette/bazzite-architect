@@ -11,7 +11,7 @@ where
     F: FnOnce(&mut VecDeque<String>) -> R,
 {
     let mutex = LOGS.get_or_init(|| Mutex::new(VecDeque::new()));
-    // SAFETY: LOGS is initialized above with a Mutex<Void>. Acquiring the lock
+    // INVARIANT: LOGS is initialized above with a Mutex<Void>. Acquiring the lock
     // only panics if a poisoning scenario occurs (thread panicked while holding
     // the lock). The application tolerates poisoning as a signal of higher-level
     // process failure; recovering with unwrap here is acceptable because logging
