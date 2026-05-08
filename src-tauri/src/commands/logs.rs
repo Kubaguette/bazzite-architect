@@ -18,7 +18,7 @@ where
     // is not expected to be used across threads that intentionally panic while
     // holding the lock. If poisoned behavior is later required, change to
     // lock().unwrap_or_else(|g| g.into_inner()).
-    let mut guard = mutex.lock().unwrap();
+    let mut guard = mutex.lock().expect("LOGS mutex lock failed: initialized in OnceLock and expected unpoisoned because logging is an in-process buffer and no thread should have panicked while holding this lock");
     f(&mut guard)
 }
 

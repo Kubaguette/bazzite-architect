@@ -1,3 +1,5 @@
+#![warn(clippy::unwrap_used)]
+
 pub mod commands;
 pub mod core;
 

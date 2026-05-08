@@ -190,7 +190,7 @@ pub fn apply_storage_setup(app: tauri::AppHandle, target_path: String) -> Result
     // crawling heavy container storage locations.
     if let Some(ref p) = final_graphroot {
         // attempt to create the graphroot directory
-        if let Err(e) = std::fs::create_dir_all(&p) {
+        if let Err(e) = std::fs::create_dir_all(p) {
             logs::error(&app, "storage", format!("Failed to create graphroot {}: {}", p, e));
         } else {
             // create .trackerignore
