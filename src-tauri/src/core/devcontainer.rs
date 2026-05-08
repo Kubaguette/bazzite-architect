@@ -51,9 +51,6 @@ pub fn write_devcontainer_files(
         // steps in postStartCommand executes them after the container is
         // started and the VS Code server is attached, preventing the UI from
         // stalling (the command is still allowed to fail harmlessly).
-        // SAFETY: `obj` is constructed above with a JSON object literal via
-        // serde_json::json!({ ... }). That macro produces a Value::Object, so
-        // as_object_mut() will always return Some for this `obj` instance.
         obj.as_object_mut().expect("devcontainer invariant: `obj` was constructed with serde_json::json! as an object literal, so as_object_mut() must return Some").insert(
             "postStartCommand".into(),
             serde_json::Value::String(cmd.to_string()),
