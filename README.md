@@ -65,6 +65,13 @@ You shouldn't need a PhD in Container-Orchestration just to write "Hello World."
 * **Safe Defaults:** Automatically handles tricky technical hurdles like **Podman GraphRoot relocation**—a common point of failure on immutable systems.
 * **Ready in under 2 Minutes:** Choose from pre-configured templates (Python, Rust, C++, etc.) and go from zero to "ready-to-code" in three clicks.
 
+### 4. Sharing Environment Setups
+Share only the small .envstation.json (no source or large files) so teammates can recreate your environment quickly.
+
+* **Export a tiny manifest:** Publish the `.envstation.json` to a GitHub Gist and copy the short URL.
+* **Recreate in two clicks:** Import a Gist to write the manifest and start creation; if it matches the same name, EnvStation treats it as an update.
+* **Privacy-first:** The PAT is stored locally and manifests contain no secrets. Gists are public—share deliberately.
+
 > **EnvStation is the Control Center for your development flow.** It combines the isolation of containers with the comfort of a native OS, ensuring your manifest remains the single source of truth.
 
 ---
