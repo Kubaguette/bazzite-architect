@@ -26,6 +26,11 @@ export default function SettingsPage() {
     return localStorage.getItem("advancedMode") === "1";
   });
 
+  // EnvShare (GitHub PAT) state
+  const [githubPat, setGithubPat] = useState<string>("");
+  const [patLoaded, setPatLoaded] = useState<boolean>(false);
+  const [infoOpen, setInfoOpen] = useState<boolean>(false);
+
   const runSystemCheck = async () => {
     setMsg("Checking...");
     try {
@@ -52,9 +57,33 @@ export default function SettingsPage() {
     window.dispatchEvent(new Event("advanced-mode-changed"));
   }, [advanced]);
 
+  // Load existing PAT on mount via backend command
+  useEffect(() => {
+    (async () => {
+      try {
+        const val = await invoke<string | null>("get_github_pat");
+        if (val) setGithubPat(val);
+      } catch (e) {
+        console.error("Error reading github_pat from backend:", e);
+      } finally {
+        setPatLoaded(true);
+      }
+    })();
+  }, []);
+
   // Design notes: follow a loose golden-ratio spacing system (base 12px, then ~20px gaps)
   const base = 12;
   const golden = Math.round(base * 1.618);
+
+  // Save PAT helper (on blur) — use backend commands to persist
+  const savePat = async (value?: string) => {
+    const v = value !== undefined ? value : githubPat;
+    try {
+      await invoke("set_github_pat", { pat: v || "" });
+    } catch (e) {
+      console.error("Error saving github_pat via backend:", e);
+    }
+  };
 
   return (
     <section>
@@ -116,7 +145,96 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* GitHub Integration (EnvShare) card */}
+        <div style={{ padding: 16, background: '#0f1724', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', boxShadow: '0 6px 18px rgba(2,6,23,0.6)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <div>
+              <div style={{ fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>GitHub Integration (EnvShare)</span>
+              </div>
+              <div style={{ marginTop: 6, color: '#e5e7eb', fontSize: 13 }}>Store a limited-scope GitHub Personal Access Token locally to enable creating public Gists.</div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <div className={`status-box`} style={{ padding: 12 }}>
+              <label style={{ display: 'block', fontSize: 13, marginBottom: 8, color: '#e5e7eb' }}>
+                Personal Access Token
+                <span
+                  onClick={() => setInfoOpen(true)}
+                  title="Info"
+                  style={{ marginLeft: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, borderRadius: 9, background: '#111827', color: '#9ca3af', fontSize: 12, marginTop: -2 }}
+                >
+                  ?
+                </span>
+              </label>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="password"
+                  value={githubPat}
+                  onChange={(e) => setGithubPat(e.target.value)}
+                  placeholder={patLoaded ? "Paste your GitHub PAT here" : "Loading..."}
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    border: '1px solid rgba(255,255,255,0.04)',
+                    background: '#0b1220',
+                    color: '#e5e7eb',
+                    height: 36,
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <button
+                  onClick={async () => { await savePat(); }}
+                  style={{
+                    background: '#2563eb',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    height: 36,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: 'translateY(-5px)'
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
+
+      {infoOpen && (
+        <div className={`modal-backdrop show`}>
+          <div className="modal-card" style={{ maxWidth: 620 }}>
+            <header>Sharing Environments via GitHub</header>
+            <div className="body">
+              <p>To share your EnvStation setups with others via a simple link, the app creates a "Gist" (a public text snippet) on your GitHub account.</p>
+              <h4 style={{ marginTop: 8 }}>How to get your PAT (Personal Access Token):</h4>
+              <ol>
+                <li>Go to GitHub: Settings ➔ Developer Settings ➔ Personal access tokens (classic).</li>
+                <li>Click Generate new token.</li>
+                <li>Give it a name (e.g., "EnvStation").</li>
+                <li><strong>Important:</strong> Check only the gist scope box.</li>
+                <li>Generate the token and paste it here.</li>
+              </ol>
+              <p style={{ marginTop: 8 }}><strong>🔒 Security Guarantee:</strong> Your token is stored strictly locally on your machine. EnvStation only uses it to communicate directly with the official GitHub API. It is never sent to any third-party servers, and because of the restricted scope, it cannot access your private repositories. You can verify this by checking the source code.</p>
+            </div>
+            <div className="footer">
+              <button onClick={() => setInfoOpen(false)} style={{ background: '#374151', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </section>
   );
