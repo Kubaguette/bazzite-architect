@@ -66,6 +66,10 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const path = resolvedPath;
 
@@ -281,6 +285,24 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
             <span className="icon" aria-hidden>📦</span>
             <span className="text">Manage packages</span>
           </button>
+          <button className="menu-item" role="menuitem" onClick={async () => { handleCloseMenu();
+            // ensure we have resolvedPath before opening modal
+            try {
+              if (!path) {
+                const p = await invoke<string | null>("resolve_project_path", { name: env.name });
+                if (p) setResolvedPath(p);
+                else { toast.error("Could not determine project path"); return; }
+              }
+              setShareError(null);
+              setShareUrl(null);
+              setShareOpen(true);
+            } catch (e) {
+              toast.error("Project path resolution failed");
+            }
+          }}>
+            <span className="icon" aria-hidden>🔗</span>
+            <span className="text">Share</span>
+          </button>
           <div className="menu-divider" role="separator" />
           <button className="menu-item btn-danger" role="menuitem" onClick={handleDelete}>
             <span className="icon" aria-hidden>🗑️</span>
@@ -314,6 +336,59 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
         environmentName={env.name}
         projectPath={resolvedPath ?? null}
       />
+
+      {shareOpen && (
+        <div className={`modal-backdrop show`}>
+          <div className="modal-card" style={{ maxWidth: 620 }}>
+            <header>Share environment via GitHub Gist</header>
+            <div className="body">
+              {!shareUrl ? (
+                <>
+                  <p>You are about to share this environment setup via a public GitHub Gist. Only the configuration (images, mounts, template) is shared, NOT your actual code or personal files.</p>
+                  {shareError ? <p style={{ color: '#fca5a5' }}>{shareError}</p> : null}
+                </>
+              ) : (
+                <>
+                  <p>Gist created successfully. You can copy the public link below.</p>
+                  <input readOnly value={shareUrl} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)', background: '#0b1220', color: '#e5e7eb' }} />
+                </>
+              )}
+            </div>
+            <div className="footer">
+              {!shareUrl ? (
+                <>
+                  <button onClick={() => setShareOpen(false)} style={{ background: '#374151', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={async () => {
+                    if (!resolvedPath) {
+                      toast.error('Project path unknown');
+                      return;
+                    }
+                    setShareLoading(true);
+                    setShareError(null);
+                    try {
+                      const url = await invoke<string>('share_environment', { projectPath: resolvedPath });
+                      setShareUrl(url);
+                      await invoke('client_log', { source: 'ui', level: 'INFO', message: `share_environment ok for '${env.name}': ${url}` }).catch(() => {});
+                    } catch (e) {
+                      const msg = toErrMsg(e);
+                      setShareError(msg);
+                      await invoke('client_log', { source: 'ui', level: 'ERROR', message: `share_environment failed for '${env.name}': ${msg}` }).catch(() => {});
+                    } finally {
+                      setShareLoading(false);
+                    }
+                  }} disabled={shareLoading} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}>{shareLoading ? 'Sharing…' : 'Confirm & Share'}</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={async () => { try { await navigator.clipboard.writeText(shareUrl); toast.success('Copied!'); } catch { toast.error('Copy failed'); } }} style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}>Copy Link</button>
+                  <button onClick={() => setShareOpen(false)} style={{ background: '#374151', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' }}>Close</button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

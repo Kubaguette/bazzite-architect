@@ -271,7 +271,7 @@ export default function CreateEnvModal({ onClose, onCreated, defaultTemplate, de
   );
 }
 
-function CreationProgressModal({ progress, onDismiss }: { progress: CreationProgressPayload | null; onDismiss: () => void }) {
+export function CreationProgressModal({ progress, onDismiss }: { progress: CreationProgressPayload | null; onDismiss: () => void }) {
   // Hooks at top
   const isDone = progress?.done;
   const isSuccess = progress?.success === true;

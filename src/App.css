@@ -338,7 +338,7 @@ html.app-ready, body.app-ready, #root.app-ready {
   border: none;
   background: var(--primary-blue); /* primary focus blue */
   color: #ffffff;
-  box-shadow: 0 8px 22px rgba(37,99,235,0.14), inset 0 -2px 0 rgba(0,0,0,0.12);
+  box-shadow: none;
   font-weight: 700;
   font-size: 16px;
   letter-spacing: 0.2px;
@@ -348,7 +348,13 @@ html.app-ready, body.app-ready, #root.app-ready {
 }
 .action-banner-btn:hover {
   background: #1f4fcf;
-  box-shadow: 0 10px 28px rgba(37,99,235,0.18), inset 0 -2px 0 rgba(0,0,0,0.12);
+  box-shadow: none;
+}
+.action-banner-btn.secondary {
+  background: #374151;
+}
+.action-banner-btn.secondary:hover {
+  background: #2c343b; /* slightly darker grey, do not switch to blue */
 }
 .action-status { align-self: stretch; }
 
