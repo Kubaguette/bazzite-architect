@@ -166,10 +166,10 @@ EnvStation is currently distributed as native packages (.deb and .rpm). Choose t
 ```bash
 # Newer apt supports local .deb install:
 sudo apt update
-sudo apt install ./EnvStation_1.0.0_amd64.deb
+sudo apt install ./EnvStation_1.1.0_amd64.deb
 
 # Or with dpkg + fix dependencies:
-sudo dpkg -i EnvStation_1.0.0_amd64.deb
+sudo dpkg -i EnvStation_1.1.0_amd64.deb
 sudo apt-get install -f
 ```
 
@@ -177,7 +177,7 @@ sudo apt-get install -f
 On OSTree-based immutable systems you cannot use `sudo dnf` to install host packages. Use rpm-ostree and reboot to apply the deployment:
 ```bash
 # Install to the immutable OSTree deployment (example):
-sudo rpm-ostree install ./EnvStation-1.0.0.x86_64.rpm
+sudo rpm-ostree install ./EnvStation-1.1.0.x86_64.rpm
 # A system reboot is required to apply the new deployment
 sudo systemctl reboot
 ```
@@ -188,14 +188,14 @@ Notes:
 #### Fedora / RHEL (traditional, mutable systems)
 If you are on a mutable Fedora/RHEL workstation (not OSTree-based), you can install with dnf:
 ```bash
-sudo dnf install ./EnvStation-1.0.0.x86_64.rpm
+sudo dnf install ./EnvStation-1.1.0.x86_64.rpm
 ```
 
 #### Arch Linux (pkg.tar.zst or AUR)
 Arch users typically install using a package in pacman format or from the AUR if available:
 ```bash
 # If you have a built pacman package:
-sudo pacman -U ./envstation-1.0.0-1-x86_64.pkg.tar.zst
+sudo pacman -U ./envstation-1.1.0-1-x86_64.pkg.tar.zst
 
 # Or install from AUR using an AUR helper (if package published):
 paru -S envstation   # or yay -S envstation
