@@ -122,13 +122,13 @@ flowchart TD
   %% Export Flow
   subgraph EXPORT["Flow A - Export Environment"]
 
-    UA -->|Click Share: Export| FEA
+    UA -->|Click Share Export| FEA
     FEA -->|share_environment| BE
 
     BE -->|Read PAT from store.json| BE
     BE -->|Read .envstation.json| BE
 
-    BE -->|POST /gists| GH
+    BE -->|POST gists| GH
     GH -->|Return html_url| BE
 
     BE -->|Return Gist URL| FEA
@@ -145,7 +145,7 @@ flowchart TD
     BE -->|Fetch gist data| GH
     GH -->|Return gist JSON| BE
 
-    BE -->|Extract export configuration| BE
+    BE -->|Extract and deserialize export config| BE
 
     BE -->|Ensure target directory exists| HB
     BE -->|Write .envstation.json| HB
@@ -179,7 +179,7 @@ flowchart TD
   - Location: src-tauri/src/commands/envshare.rs
   - HTTP client: uses `reqwest` for both POST (create gist) and GET (fetch gist) operations. Requests include headers: `User-Agent: EnvStation`, `Authorization: Bearer <PAT>` (when posting), `Accept: application/vnd.github+json`, and `X-GitHub-Api-Version: 2022-11-28` where appropriate.
   - Export flow: `share_environment(project_path: String) -> Result<String, String>` — reads local PAT, reads `.envstation.json`, posts to GitHub, returns `html_url`.
-  - Import flow: `import_environment(app: tauri::AppHandle, gist_url: String, target_dir: String) -> Result<(), String>` — fetches gist, extracts `envstation-export.json`, writes `<target_dir>/.envstation.json`, and invokes the existing `create_environment` command to schedule the background scaffold. The command emits progress events via `app.emit` which the frontend subscribes to.
+  - Import flow: `import_environment(app: tauri::AppHandle, gist_url: String, target_dir: String) -> Result<(), String>` — fetches the gist, fully deserializes the `envstation-export.json` payload (including `system_packages` and other custom fields such as mounts or init hooks), writes the exported manifest to `<target_dir>/.envstation.json`, and invokes the existing `create_environment` command while passing through the exported package list and relevant fields so the recreated environment is provisioned to match the export. The create operation runs in the background and emits progress events via `app.emit` which the frontend subscribes to.
 
 - Frontend (React)
   - PAT configuration: src/pages/SettingsPage.tsx — manages the masked Personal Access Token input and persists it locally via Tauri commands.
@@ -193,7 +193,7 @@ flowchart TD
 
 ### 4.4 Operational Considerations
 - Rate-limiting & retries: GitHub API rate limits apply to authenticated users. The backend surfaces HTTP errors to the frontend and logs them; retry policies are intentionally conservative at this stage.
-- Validation: The backend performs defensive validation of Gist responses (ensuring `envstation-export.json` exists and contains valid JSON) and reports precise errors for missing fields or malformed content.
+- Validation: The backend performs defensive validation of Gist responses (ensuring `envstation-export.json` exists and contains valid JSON). During import the manifest is validated and normalized (for example: `system_packages` entries are normalized) and precise errors are reported for missing fields or malformed content. The import now preserves exported package lists and other supported custom fields so the recreated environment is a faithful 1:1 clone of the exported one.
 - Auditing: All EnvShare actions (save PAT, share, import, gist failures) are logged via the centralized logging system and emitted as `app-log` events so the Logs page captures an auditable trail.
 
 ---
@@ -546,7 +546,7 @@ sequenceDiagram
         Ctx->>IPC: invoke('cancel_dir_size_jobs')
         IPC->>Rust: cancel_dir_size_jobs
         Rust->>Rust: DIR_SIZE_GEN++
-        Note over FS: On next loop check:<br/>generation changed => early exit
+        Note over FS: On next loop check: generation changed => early exit
     end
 ```
 
