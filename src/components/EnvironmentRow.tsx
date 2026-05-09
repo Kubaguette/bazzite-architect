@@ -350,7 +350,25 @@ function EnvironmentRowImpl({ env, base, onOpenVSCode, onDelete }: Props) {
               ) : (
                 <>
                   <p>Gist created successfully. You can copy the public link below.</p>
-                  <input readOnly value={shareUrl} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)', background: '#0b1220', color: '#e5e7eb' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                    <input
+                      readOnly
+                      value={shareUrl}
+                      title={shareUrl}
+                      style={{
+                        flex: 1,
+                        minWidth: 0, // allow shrinking inside flex container
+                        padding: '8px 10px',
+                        borderRadius: 8,
+                        border: '1px solid rgba(255,255,255,0.04)',
+                        background: '#0b1220',
+                        color: '#e5e7eb',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    />
+                  </div>
                 </>
               )}
             </div>

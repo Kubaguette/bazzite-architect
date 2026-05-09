@@ -174,6 +174,7 @@ pub async fn import_environment(app: tauri::AppHandle, gist_url: String, target_
         name: manifest.name.clone(),
         template: manifest.stack.clone(),
         home_mount: Some(expanded.clone()),
+        system_packages: Some(manifest.system_packages.clone()),
     };
 
     // Schedule environment creation using existing command

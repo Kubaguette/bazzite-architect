@@ -65,6 +65,11 @@ pub struct CreateEnvironmentRequest {
     pub template: String,
     #[serde(rename = "homeMount", alias = "home_mount")]
     pub home_mount: Option<String>,
+    /// Optional system packages to provision during creation. This field is
+    /// accepted when importing an exported environment so the recreated
+    /// environment retains the same package set.
+    #[serde(rename = "systemPackages", alias = "system_packages")]
+    pub system_packages: Option<Vec<String>>,
 }
 
 #[derive(Serialize)]
@@ -181,6 +186,7 @@ pub async fn create_environment(
         name: name.clone(),
         template: template.clone(),
         home_mount,
+        system_packages: request.system_packages.clone(),
     };
 
     logs::info(

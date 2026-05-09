@@ -159,6 +159,10 @@ pub struct CreateEnvironmentParams {
     pub name: String,
     pub template: String,
     pub home_mount: Option<String>,
+    /// Optional list of system packages to provision into the environment.
+    /// When present, these override the template.default package list so
+    /// imported/exported manifests can be faithfully recreated.
+    pub system_packages: Option<Vec<String>>,
 }
 
 /// Result produced after a successful environment creation.
@@ -525,13 +529,18 @@ else echo unknown; fi"#;
     if let Some(home_root) = &chosen_home {
         let root = Path::new(home_root);
 
-        // Initialize manifest from the template's base packages so day-one drift is avoided.
+        // Initialize manifest from either provided packages (import case) or the template's base packages so day-one drift is avoided.
+        let pkg_list: Vec<String> = if let Some(ref pkgs) = params.system_packages {
+            pkgs.iter().map(|s| s.trim().to_lowercase()).collect()
+        } else {
+            template.packages.iter().map(|s| s.trim().to_lowercase()).collect()
+        };
         let manifest = EnvironmentManifest {
             version: "1.0.0".to_string(),
             name: params.name.clone(),
             stack: params.template.clone(),
-            // Normalize manifest packages (lowercase, trimmed) to avoid case/whitespace mismatches.
-            system_packages: template.packages.iter().map(|s| s.trim().to_lowercase()).collect(),
+            // system_packages now reflects explicit import values when provided
+            system_packages: pkg_list,
         };
         let manifest_path = root.join(".envstation.json");
         let json = serde_json::to_string_pretty(&manifest)
