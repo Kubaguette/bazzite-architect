@@ -1,6 +1,6 @@
 use crate::commands::logs;
 use crate::core::environment::{
-    self, CreateEnvironmentParams, EnvironmentManifest, ProgressKind, ProgressUpdate,
+    self, CreateEnvironmentParams, EnvironmentManifest, ProgressKind, ProgressUpdate, find_env_using_host_path,
 };
 use crate::core::util::{build_host_command, build_host_command_async};
 use serde::{Deserialize, Serialize};
@@ -181,6 +181,90 @@ pub async fn create_environment(
         .home_mount
         .map(|hm| hm.trim().to_string())
         .filter(|value| !value.is_empty());
+
+    // Expand target dir similar to core::environment::create_environment so checks
+    // happen before we spawn the long-running background task.
+    let expanded_target = if let Some(hm) = &home_mount {
+        let mut v = hm.clone();
+        if v.starts_with("$HOME/") {
+            if let Ok(h) = std::env::var("HOME") {
+                v = format!("{}/{}", h.trim_end_matches('/'), v.trim_start_matches("$HOME/"));
+            }
+        } else if v.starts_with("~/") {
+            if let Ok(h) = std::env::var("HOME") {
+                v = format!("{}/{}", h.trim_end_matches('/'), v.trim_start_matches("~/"));
+            }
+        }
+        v
+    } else {
+        match std::env::var("HOME") {
+            Ok(h) => format!("{}/{}", h.trim_end_matches('/'), name),
+            Err(_) => return Err("Failed to read HOME".to_string()),
+        }
+    };
+
+    // Check for existing manifest at target path
+    let manifest_path = std::path::Path::new(&expanded_target).join(".envstation.json");
+    if manifest_path.exists() {
+        match std::fs::read_to_string(&manifest_path) {
+            Ok(content) => match serde_json::from_str::<EnvironmentManifest>(&content) {
+                Ok(existing_manifest) => {
+                    if existing_manifest.name != name {
+                        // Abort: different project already exists here
+                        let _ = app.emit(
+                            "app-notification",
+                            serde_json::json!({ "message": "Environment already exists in this location.", "type": "warning" }),
+                        );
+                        return Err(format!(
+                            "Target path already contains another EnvStation project: {}",
+                            expanded_target
+                        ));
+                    } else {
+                        // Same name: we'll proceed but inform the user we're updating
+                        let _ = app.emit(
+                            "app-notification",
+                            serde_json::json!({ "message": "Existing environment found — updating the environment rather than creating a new one.", "type": "warning" }),
+                        );
+                    }
+                }
+                Err(_) => {
+                    let _ = app.emit(
+                        "app-notification",
+                        serde_json::json!({ "message": "Target contains a malformed environment manifest.", "type": "warning" }),
+                    );
+                    return Err(format!("Target path contains a malformed .envstation.json: {}", expanded_target));
+                }
+            },
+            Err(_) => {
+                let _ = app.emit(
+                    "app-notification",
+                    serde_json::json!({ "message": "Could not read existing manifest at target path.", "type": "warning" }),
+                );
+                return Err(format!("Could not read existing manifest at: {}", expanded_target));
+            }
+        }
+    } else {
+        // No manifest: check whether another environment already uses this host path
+        match find_env_using_host_path(&expanded_target).await {
+            Some(existing_env) if existing_env != name => {
+                let _ = app.emit(
+                    "app-notification",
+                    serde_json::json!({ "message": "Environment already exists in this location.", "type": "warning" }),
+                );
+                return Err(format!("Host path already used by existing environment '{}': {}", existing_env, expanded_target));
+            }
+            Some(_) => {
+                // existing_env == name: allow, but inform user
+                let _ = app.emit(
+                    "app-notification",
+                    serde_json::json!({ "message": "Existing environment found — updating the environment rather than creating a new one.", "type": "warning" }),
+                );
+            }
+            None => {
+                // no conflict, continue
+            }
+        }
+    }
 
     let params = CreateEnvironmentParams {
         name: name.clone(),

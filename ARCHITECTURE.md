@@ -198,6 +198,33 @@ flowchart TD
 
 ---
 
+### 4.5 Pre-creation host-path detection (automatic environment detection)
+
+To avoid accidental collisions when creating or recreating environments (including when importing manifests from EnvShare Gists), the backend performs an early, synchronous host-path conflict check before any long-running creation work starts.
+
+Key points:
+
+- Purpose: prevent two different environments from mounting the same host project directory which would lead to data corruption, confusing IDE attachments, or stale DevContainer re-attachment.
+- Heuristics & implementation (see src-tauri/src/core/environment.rs :: find_env_using_host_path):
+  - Enumerates existing Distrobox environments (`distrobox list --no-color`) to obtain candidate environment names.
+  - For each environment it probes the container's `$HOME` (via `distrobox enter <env> -- printf "%s" "$HOME"`) and attempts to resolve the host source for that mount using `findmnt` when available.
+  - Falls back to common host-path inferences: `/var/home/<user>` ↔ `/home/<user>` mapping and the inferred `$HOME/<env_name>` layout.
+  - Normalizes paths (treats `/var/home` as `/home`, trims trailing slashes) before comparison so detection works across Silverblue/Bazzite variants.
+
+- Policy (Solution B — import-friendly):
+  - If the target directory already contains a `.envstation.json` manifest and its `name` differs from the requested environment name, creation is aborted and the user is notified (a yellow toast / app-notification of type "warning" with a message such as "Environment already exists in this location.").
+  - If the manifest's `name` matches the requested name, creation proceeds: the backend emits an informational warning toast that the existing environment will be updated (e.g. "Existing environment found — updating the environment rather than creating a new one."). This preserves the import-from-Gist flow (where the manifest is written first) while still informing the user about an update rather than a fresh creation.
+  - If no manifest is present, the backend uses the automatic environment detection heuristics above. If a different existing environment is found to be using that host path, creation is aborted with the same warning toast. If the environment using the path has the same name, creation proceeds and the user is notified that an update will occur.
+
+- UX integration:
+  - The commands layer performs this check synchronously and emits `app-notification` events with `type: "warning"` for both abort and update-info cases so the frontend displays a yellow toast immediately. This prevents launching heavyweight background tasks only to fail later and gives the user fast, clear feedback.
+
+- Rationale and benefits:
+  - Prevents accidental environment collisions and the tricky-to-debug symptoms that follow (stale mounts, broken DevContainer attach, orphaned containers).
+  - Preserves the import/recreate workflow: exported manifests from EnvShare (Gists) are intentionally supported because the manifest is created first and will match the requested environment name, allowing an explicit update flow instead of a denial.
+
+- Implementation note: the core logic is implemented in the domain layer (core/environment) as a reusable helper and referenced by the create command so the policy is enforced consistently whether invoked interactively or via import flows.
+
 ## 5. Core Concepts & Scaffolding
 
 At the heart of EnvStation is the concept of an "Environment." Rather than treating containers, project directories, and IDE configurations as separate, disjointed entities, the system unifies them into a single, cohesive unit.
