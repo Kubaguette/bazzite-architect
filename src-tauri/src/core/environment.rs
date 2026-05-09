@@ -1,5 +1,5 @@
 use crate::core::devcontainer::write_devcontainer_files;
-use crate::core::util::build_host_command_async;
+use crate::core::util::{build_host_command_async, normalize_home_path};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::path::Path;
@@ -124,6 +124,117 @@ dotnet --info || true
     }
 }
 
+// Helper: try to determine whether the given host path is already associated with
+// an existing distrobox environment. This mirrors the heuristics used elsewhere
+// (findmnt, /var/home mapping, inferred $HOME/<env>) and returns the first
+// matching environment name if found.
+pub async fn find_env_using_host_path(target: &str) -> Option<String> {
+    use std::path::Path;
+    // Normalize comparison target
+    let tgt_norm = normalize_home_path(target);
+
+    // List environments
+    let list_out = build_host_command_async("distrobox")
+        .args(["list", "--no-color"]) 
+        .output()
+        .await
+        .ok()?;
+    if !list_out.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&list_out.stdout);
+    let mut names: Vec<String> = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() { continue; }
+        if trimmed.starts_with("ID") && trimmed.contains("NAME") { continue; }
+        if trimmed.starts_with('-') || trimmed.starts_with('=') { continue; }
+
+        if trimmed.contains('|') {
+            let parts: Vec<String> = trimmed
+                .split('|')
+                .map(|p| p.trim().to_string())
+                .filter(|p| !p.is_empty())
+                .collect();
+            if parts.len() >= 2 {
+                names.push(parts[1].clone());
+                continue;
+            }
+        }
+
+        let ws: Vec<&str> = trimmed.split_whitespace().collect();
+        if ws.len() >= 2 {
+            names.push(ws[1].to_string());
+        }
+    }
+
+    for name in names.iter() {
+        // Probe container $HOME
+        let home_out = build_host_command_async("distrobox")
+            .args(["enter", name, "--", "bash", "-lc", "printf %s \"$HOME\""])
+            .output()
+            .await;
+        let container_home = match home_out {
+            Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
+            _ => continue,
+        };
+        if container_home.is_empty() { continue; }
+
+        // Attempt findmnt to discover the host source for $HOME
+        let fm_cmd = "if command -v findmnt >/dev/null 2>&1; then findmnt -n -o SOURCE --target \"$HOME\"; fi";
+        let fm_out = build_host_command_async("distrobox")
+            .args(["enter", name, "--", "bash", "-lc", fm_cmd])
+            .output()
+            .await
+            .ok();
+        let mut findmnt_src_path = String::new();
+        if let Some(out) = &fm_out {
+            if out.status.success() {
+                let out_s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                for token in out_s.split_whitespace() {
+                    if let (Some(lb), Some(rb)) = (token.find('['), token.find(']')) {
+                        if rb > lb + 1 {
+                            let inner = &token[lb + 1..rb];
+                            if inner.starts_with('/') {
+                                findmnt_src_path = inner.to_string();
+                                break;
+                            }
+                        }
+                    }
+                }
+                if findmnt_src_path.is_empty() && out_s.starts_with('/') {
+                    findmnt_src_path = out_s;
+                }
+            }
+        }
+
+        // Resolve candidate host path
+        let mut candidate: Option<String> = None;
+        if !findmnt_src_path.is_empty() && Path::new(&findmnt_src_path).exists() {
+            candidate = Some(findmnt_src_path);
+        } else if let Some(suffix) = container_home.strip_prefix("/home/") {
+            let cand = format!("/var/home/{}", suffix);
+            if Path::new(&cand).exists() {
+                candidate = Some(cand);
+            }
+        } else {
+            let host_home = std::env::var("HOME").unwrap_or_else(|_| String::from("/home"));
+            let inferred = format!("{}/{}", host_home.trim_end_matches('/'), name);
+            if Path::new(&inferred).exists() {
+                candidate = Some(inferred);
+            }
+        }
+
+        if let Some(cand) = candidate {
+            if normalize_home_path(&cand) == tgt_norm {
+                return Some(name.clone());
+            }
+        }
+    }
+
+    None
+}
+
 /// Represents the semantic level of a progress update emitted during environment
 /// creation.
 ///
@@ -159,6 +270,10 @@ pub struct CreateEnvironmentParams {
     pub name: String,
     pub template: String,
     pub home_mount: Option<String>,
+    /// Optional list of system packages to provision into the environment.
+    /// When present, these override the template.default package list so
+    /// imported/exported manifests can be faithfully recreated.
+    pub system_packages: Option<Vec<String>>,
 }
 
 /// Result produced after a successful environment creation.
@@ -268,6 +383,75 @@ pub async fn create_environment(
                 home_mount
             ));
         }
+
+        // If a manifest already exists at the target path, verify whether it
+        // refers to the same environment name. This allows import flows (where
+        // the manifest is written before calling create_environment) to proceed
+        // while preventing accidental reuse of a project folder belonging to
+        // another environment.
+        let manifest_path = p.join(".envstation.json");
+        if manifest_path.exists() {
+            match std::fs::read_to_string(&manifest_path) {
+                Ok(content) => {
+                    match serde_json::from_str::<EnvironmentManifest>(&content) {
+                        Ok(existing_manifest) => {
+                            if existing_manifest.name != params.name {
+                                progress(ProgressUpdate {
+                                    stage: "validate_home",
+                                    message: format!("Target path already contains another EnvStation project: {}", home_mount),
+                                    kind: ProgressKind::Error,
+                                });
+                                return Err(format!("Target path already contains another EnvStation project: {}", home_mount));
+                            } else {
+                                progress(ProgressUpdate {
+                                    stage: "validate_home",
+                                    message: format!("Existing manifest matches requested environment '{}'; proceeding.", params.name),
+                                    kind: ProgressKind::Info,
+                                });
+                            }
+                        }
+                        Err(_) => {
+                            progress(ProgressUpdate {
+                                stage: "validate_home",
+                                message: format!("Target path contains a malformed .envstation.json: {}", home_mount),
+                                kind: ProgressKind::Error,
+                            });
+                            return Err(format!("Target path contains a malformed .envstation.json: {}", home_mount));
+                        }
+                    }
+                }
+                Err(_) => {
+                    progress(ProgressUpdate {
+                        stage: "validate_home",
+                        message: format!("Could not read existing manifest at: {}", home_mount),
+                        kind: ProgressKind::Error,
+                    });
+                    return Err(format!("Could not read existing manifest at: {}", home_mount));
+                }
+            }
+        } else {
+            // If no manifest is present, still check whether an existing
+            // distrobox environment already uses this host path.
+            if let Some(existing_env) = find_env_using_host_path(home_mount).await {
+                // If the existing environment has a different name, block to
+                // avoid colliding with another environment's home mount.
+                if existing_env != params.name {
+                    progress(ProgressUpdate {
+                        stage: "validate_home",
+                        message: format!("Host path already appears to be used by environment '{}': {}", existing_env, home_mount),
+                        kind: ProgressKind::Error,
+                    });
+                    return Err(format!("Host path already used by existing environment '{}': {}", existing_env, home_mount));
+                } else {
+                    progress(ProgressUpdate {
+                        stage: "validate_home",
+                        message: format!("Host path already used by environment with same name '{}'; proceeding.", existing_env),
+                        kind: ProgressKind::Info,
+                    });
+                }
+            }
+        }
+
         if !p.exists() {
             progress(ProgressUpdate {
                 stage: "prepare_home",
@@ -525,13 +709,18 @@ else echo unknown; fi"#;
     if let Some(home_root) = &chosen_home {
         let root = Path::new(home_root);
 
-        // Initialize manifest from the template's base packages so day-one drift is avoided.
+        // Initialize manifest from either provided packages (import case) or the template's base packages so day-one drift is avoided.
+        let pkg_list: Vec<String> = if let Some(ref pkgs) = params.system_packages {
+            pkgs.iter().map(|s| s.trim().to_lowercase()).collect()
+        } else {
+            template.packages.iter().map(|s| s.trim().to_lowercase()).collect()
+        };
         let manifest = EnvironmentManifest {
             version: "1.0.0".to_string(),
             name: params.name.clone(),
             stack: params.template.clone(),
-            // Normalize manifest packages (lowercase, trimmed) to avoid case/whitespace mismatches.
-            system_packages: template.packages.iter().map(|s| s.trim().to_lowercase()).collect(),
+            // system_packages now reflects explicit import values when provided
+            system_packages: pkg_list,
         };
         let manifest_path = root.join(".envstation.json");
         let json = serde_json::to_string_pretty(&manifest)

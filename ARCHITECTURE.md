@@ -13,13 +13,15 @@
 | 🧩 [**1. Overview**](#1-introduction--system-overview) | Mission statement and the core architectural problem. |
 | 🚧 [**2. Boundaries**](#2-system-boundaries--non-goals) | Explicit scope control and maintainability constraints. |
 | 🛠️ [**3. Tech Stack**](#3-technology-stack--interfaces) | Rationale for the Rust/Tauri/Podman stack. |
-| 🏗️ [**4. Scaffolding**](#4-core-concepts--scaffolding) | Automated project initialization and environment logic. |
-| ❤️ [**5. Sync Engine**](#5-the-sync-engine--the-manifest-the-heart) | The declarative heart: Preventing state divergence. |
-| 💾 [**6. Storage**](#6-storage-orchestration--resource-management) | Safe Podman GraphRoot relocation & heuristics. |
-| ⚡ [**7. Optimization**](#7-performance--i-o-optimization) | Concurrency, request coalescing, and I/O safety. |
-| 🛡️ [**8. Resilience**](#8-failure-modes--error-handling) | Unified observability and fail-safe propagation. |
-| 🔐 [**9. Security**](#9-security--isolation) | Threat model and rootless execution boundaries. |
-| 📁 [**10. Structure**](#10-project-structure--code-guide) | Modular Refactor: The Core-Command-View pattern. |
+| 🔗 [**4. EnvShare**](#4-envshare-portable-environment-configuration) | Portable environment manifest sharing via GitHub Gists. |
+| 🏗️ [**5. Scaffolding**](#5-core-concepts--scaffolding) | Automated project initialization and environment logic. |
+| ❤️ [**6. Sync Engine**](#6-the-sync-engine--the-manifest-the-heart) | The declarative heart: Preventing state divergence. |
+| 💾 [**7. Storage**](#7-storage-orchestration--resource-management) | Safe Podman GraphRoot relocation & heuristics. |
+| ⚡ [**8. Optimization**](#8-performance--i-o-optimization) | Concurrency, request coalescing, and I/O safety. |
+| 🛡️ [**9. Resilience**](#9-failure-modes--error-handling) | Unified observability and fail-safe propagation. |
+| 🔐 [**10. Security**](#10-security--isolation) | Threat model and rootless execution boundaries. |
+| 📁 [**11. Structure**](#11-project-structure--code-guide) | Modular Refactor: The Core-Command-View pattern. |
+| 🧪 [**12. CI/CD & Delivery**](#12-cicd--delivery-architecture) | Build and release pipeline (GitHub Actions). |
 
 
 
@@ -57,8 +59,8 @@ graph TD
     G[VS Code DevContainers]
   end
 
-  C -.->|Targeted MVP Sync:<br/>manifest, postCreateCommand, live dnf| F
-  C -.->|Scaffolds & launches VS Code<br/>+ Targeted MVP Sync| G
+  C -.->|Targeted MVP Sync: manifest, postCreateCommand, live dnf| F
+  C -.->|Scaffolds & launches VS Code + Targeted MVP Sync| G
   F -.-|State Divergence Risk| G
 ```
 
@@ -93,18 +95,148 @@ All interactions between the UI and the host OS happen via **Tauri's Inter-Proce
 
 ---
 
-## 4. Core Concepts & Scaffolding
+## 4. EnvShare (Portable Environment Configuration)
+
+EnvShare allows users to share their immutable development environment configurations (images, mounts, stacks) without sharing actual project source code or data. It utilizes GitHub Gists as a simple, serverless storage solution for portable manifest strings.
+
+### 4.1 High-level description
+- Purpose: enable quick sharing of an environment's manifest (`.envstation.json`) as a public Gist so others can recreate the same environment scaffold without exchanging project files.
+- Scope: share only the serialized manifest (images, mounts, stack/template, system_packages, etc.). No project source code, binary artifacts, or user data are transmitted.
+
+### 4.2 Sequence Diagram
+Illustrates Export (Share) and Import (Recreate) flows:
+
+```mermaid
+flowchart TD
+
+  %% Participants
+  UA["Exporter - User A"]
+  FEA["EnvStation Frontend - User A"]
+  BE["EnvStation Backend - Rust"]
+  GH["GitHub API"]
+
+  UB["Importer - User B"]
+  FEB["EnvStation Frontend - User B"]
+  HB["Host System - User B"]
+
+  %% Export Flow
+  subgraph EXPORT["Flow A - Export Environment"]
+
+    UA -->|Click Share Export| FEA
+    FEA -->|share_environment| BE
+
+    BE -->|Read PAT from store.json| BE
+    BE -->|Read .envstation.json| BE
+
+    BE -->|POST gists| GH
+    GH -->|Return html_url| BE
+
+    BE -->|Return Gist URL| FEA
+    FEA -->|Display Gist URL| UA
+
+  end
+
+  %% Import Flow
+  subgraph IMPORT["Flow B - Import Environment"]
+
+    UB -->|Paste Gist URL and Confirm| FEB
+    FEB -->|import_environment| BE
+
+    BE -->|Fetch gist data| GH
+    GH -->|Return gist JSON| BE
+
+    BE -->|Extract and deserialize export config| BE
+
+    BE -->|Ensure target directory exists| HB
+    BE -->|Write .envstation.json| HB
+
+    BE -->|Schedule environment creation| BE
+
+    BE -->|Return immediately| FEB
+
+  end
+
+  %% Progress Events
+  subgraph EVENTS["Progress Event Stream"]
+
+    BE -->|Emit progress events| FEB
+    FEB -->|Show live progress modal| UB
+
+    BE --> DECISION{"Import successful?"}
+
+    DECISION -->|Yes| SUCCESS["Show success toast and refresh list"]
+
+    DECISION -->|No| FAILURE["Show error toast and log error"]
+
+    SUCCESS --> UB
+    FAILURE --> UB
+
+  end
+```
+
+### 4.3 Technical Implementation Notes
+- Backend (Rust)
+  - Location: src-tauri/src/commands/envshare.rs
+  - HTTP client: uses `reqwest` for both POST (create gist) and GET (fetch gist) operations. Requests include headers: `User-Agent: EnvStation`, `Authorization: Bearer <PAT>` (when posting), `Accept: application/vnd.github+json`, and `X-GitHub-Api-Version: 2022-11-28` where appropriate.
+  - Export flow: `share_environment(project_path: String) -> Result<String, String>` — reads local PAT, reads `.envstation.json`, posts to GitHub, returns `html_url`.
+  - Import flow: `import_environment(app: tauri::AppHandle, gist_url: String, target_dir: String) -> Result<(), String>` — fetches the gist, fully deserializes the `envstation-export.json` payload (including `system_packages` and other custom fields such as mounts or init hooks), writes the exported manifest to `<target_dir>/.envstation.json`, and invokes the existing `create_environment` command while passing through the exported package list and relevant fields so the recreated environment is provisioned to match the export. The create operation runs in the background and emits progress events via `app.emit` which the frontend subscribes to.
+
+- Frontend (React)
+  - PAT configuration: src/pages/SettingsPage.tsx — manages the masked Personal Access Token input and persists it locally via Tauri commands.
+  - Export (Share) UI: integrated into environment row actions (src/components/EnvironmentRow.tsx) — opens a modal, invokes `share_environment`, and displays the returned Gist URL on success.
+  - Import (Recreate) UI: src/pages/DashboardPage.tsx — a modal accepts a Gist URL and target directory, invokes `import_environment`, and subscribes to `creation-progress` events to render the same progress modal used by the local create flow. The frontend only considers the import complete when the backend emits the final creation `done=true` event.
+
+- Security
+  - PAT storage: The PAT is stored strictly locally on the user's machine in the app's config directory (plain JSON store file). The app only requests and stores tokens with the minimum required scope (Gist only). The backend never transmits the token to third-party servers; it is only used to authenticate directly with GitHub's API.
+  - Gist scope: Users are advised to create a token with the `gist` scope only. Because gists are public in this flow, the manifest content becomes world-readable once posted.
+  - Privacy guarantee: EnvShare transmits only environment metadata; no project source, code, or personal files are uploaded by default.
+
+### 4.4 Operational Considerations
+- Rate-limiting & retries: GitHub API rate limits apply to authenticated users. The backend surfaces HTTP errors to the frontend and logs them; retry policies are intentionally conservative at this stage.
+- Validation: The backend performs defensive validation of Gist responses (ensuring `envstation-export.json` exists and contains valid JSON). During import the manifest is validated and normalized (for example: `system_packages` entries are normalized) and precise errors are reported for missing fields or malformed content. The import now preserves exported package lists and other supported custom fields so the recreated environment is a faithful 1:1 clone of the exported one.
+- Auditing: All EnvShare actions (save PAT, share, import, gist failures) are logged via the centralized logging system and emitted as `app-log` events so the Logs page captures an auditable trail.
+
+---
+
+### 4.5 Pre-creation host-path detection (automatic environment detection)
+
+To avoid accidental collisions when creating or recreating environments (including when importing manifests from EnvShare Gists), the backend performs an early, synchronous host-path conflict check before any long-running creation work starts.
+
+Key points:
+
+- Purpose: prevent two different environments from mounting the same host project directory which would lead to data corruption, confusing IDE attachments, or stale DevContainer re-attachment.
+- Heuristics & implementation (see src-tauri/src/core/environment.rs :: find_env_using_host_path):
+  - Enumerates existing Distrobox environments (`distrobox list --no-color`) to obtain candidate environment names.
+  - For each environment it probes the container's `$HOME` (via `distrobox enter <env> -- printf "%s" "$HOME"`) and attempts to resolve the host source for that mount using `findmnt` when available.
+  - Falls back to common host-path inferences: `/var/home/<user>` ↔ `/home/<user>` mapping and the inferred `$HOME/<env_name>` layout.
+  - Normalizes paths (treats `/var/home` as `/home`, trims trailing slashes) before comparison so detection works across Silverblue/Bazzite variants.
+
+- Policy (Solution B — import-friendly):
+  - If the target directory already contains a `.envstation.json` manifest and its `name` differs from the requested environment name, creation is aborted and the user is notified (a yellow toast / app-notification of type "warning" with a message such as "Environment already exists in this location.").
+  - If the manifest's `name` matches the requested name, creation proceeds: the backend emits an informational warning toast that the existing environment will be updated (e.g. "Existing environment found — updating the environment rather than creating a new one."). This preserves the import-from-Gist flow (where the manifest is written first) while still informing the user about an update rather than a fresh creation.
+  - If no manifest is present, the backend uses the automatic environment detection heuristics above. If a different existing environment is found to be using that host path, creation is aborted with the same warning toast. If the environment using the path has the same name, creation proceeds and the user is notified that an update will occur.
+
+- UX integration:
+  - The commands layer performs this check synchronously and emits `app-notification` events with `type: "warning"` for both abort and update-info cases so the frontend displays a yellow toast immediately. This prevents launching heavyweight background tasks only to fail later and gives the user fast, clear feedback.
+
+- Rationale and benefits:
+  - Prevents accidental environment collisions and the tricky-to-debug symptoms that follow (stale mounts, broken DevContainer attach, orphaned containers).
+  - Preserves the import/recreate workflow: exported manifests from EnvShare (Gists) are intentionally supported because the manifest is created first and will match the requested environment name, allowing an explicit update flow instead of a denial.
+
+- Implementation note: the core logic is implemented in the domain layer (core/environment) as a reusable helper and referenced by the create command so the policy is enforced consistently whether invoked interactively or via import flows.
+
+## 5. Core Concepts & Scaffolding
 
 At the heart of EnvStation is the concept of an "Environment." Rather than treating containers, project directories, and IDE configurations as separate, disjointed entities, the system unifies them into a single, cohesive unit.
 
-### 4.1 The "Environment" Entity
+### 5.1 The "Environment" Entity
 An Environment in EnvStation consists of four tightly coupled layers:
 1. **The Host Workspace:** A local directory residing on the user's actual filesystem (e.g., `~/Projects/Python_Project`). This ensures code is never trapped inside a container volume and remains accessible to host GUI tools.
 2. **The Distrobox Container:** A rootless container created via `distrobox create` (using a Fedora toolbox base), optionally with an environment-specific home mount and an initial setup snippet to install baseline tools.
 3. **The DevContainer Configuration:** An automatically generated `.devcontainer` folder containing the `devcontainer.json` file. This defines the IDE container image, postCreate steps where applicable, and recommended extensions.
 4. **The Synchronization Manifest:** The `.envstation.json` file, which acts as the single source of truth for required system-level packages (MVP: `system_packages`).
 
-### 4.2 Project Scaffolding & Templates
+### 5.2 Project Scaffolding & Templates
 To eliminate boilerplate configuration, EnvStation provides an automated templating engine. When a user creates a new environment, the Rust backend executes a deterministic scaffolding sequence:
 * Provisions the host project directory (and an environment-specific home mount if requested).
 * Creates language-specific project scaffolding (e.g., README, minimal source files, build config) and `.vscode/extensions.json`.
@@ -117,7 +249,7 @@ C# / .NET: The new C# template scaffolds a minimal Program.cs and a project file
 
 From there, opening VS Code is a separate action invoked from the app. The result is a ready-to-use, containerized IDE setup with zero manual JSON editing required.
 
-### 4.3 Open Mode: Terminal vs. VS Code (UI Button)
+### 5.3 Open Mode: Terminal vs. VS Code (UI Button)
 
 A new explicit "Open" control offers users two distinct runtime entry points for an Environment: "Open in Terminal" (Distrobox host terminal) and "Open in VS Code" (DevContainer/IDE attach). This toggle simplifies the mental model and makes lifecycle and provisioning semantics explicit.
 
@@ -143,7 +275,7 @@ A new explicit "Open" control offers users two distinct runtime entry points for
   - Tests: add integration tests to assert that manifest edits performed via Terminal are persisted and that DevContainer hooks reflect those edits after the next rebuild.
 
 
-### 4.4 DevContainer Lifecycle Hooks (Podman & Toolbox Integration)
+### 5.4 DevContainer Lifecycle Hooks (Podman & Toolbox Integration)
 
 On immutable host systems (for example: Bazzite/Kinoite) and when leveraging rootless Podman via toolbox/distrobox, we discovered a critical lifecycle interaction between DevContainer hooks and the VS Code agent attach sequence.
 
@@ -159,7 +291,7 @@ On immutable host systems (for example: Bazzite/Kinoite) and when leveraging roo
 
 This principle is a deliberate trade-off: we accept that dev-time provisioning may occur after the IDE is attached (and visible) in order to guarantee the UI and agent lifecycle remain healthy. The manifest & sync engine remain the single source of truth for required system packages; the orchestration simply schedules their application at a safer lifecycle point.
 
-### 4.4 IDE Integration & Zero-Config Philosophy
+### 5.5 IDE Integration & Zero-Config Philosophy
 
 To deliver a true "zero-config" C++ experience on immutable hosts, the scaffolding engine adopted a "Preset-first" strategy rather than relying on editor-side heuristics or legacy `.vscode` hacks.
 
@@ -180,9 +312,9 @@ Outcome: With a preset-first approach and explicit compile-commands wiring, open
 
 ---
 
-## 5. The Sync Engine & The Manifest (The Heart)
+## 6. The Sync Engine & The Manifest (The Heart)
 
-### 5.1 The "Two Universes" Problem (State Divergence)
+### 6.1 The "Two Universes" Problem (State Divergence)
 On immutable hosts with containerized development environments, there are effectively two universes that relate to the same task but are technically decoupled:
 
 1. Distrobox universe: A host-integrated container (rootless, Podman) where CLI tools and build toolchains are often installed.
@@ -196,7 +328,7 @@ Without orchestration, these universes drift quickly. Typical symptoms include:
 
 EnvStation addresses this divergence by centralizing all system packages and relevant sync steps through a Sync Engine, recorded in the manifest. In the current MVP, manual, ad-hoc in-container changes are not auto-detected; reconciliation/adoption flows are planned.
 
-### 5.2 The .envstation.json Manifest as Single Source of Truth
+### 6.2 The .envstation.json Manifest as Single Source of Truth
 The manifest is the sole authoritative source for the desired target state of system-wide dependencies in an environment.
 
 MVP schema (simplified):
@@ -218,7 +350,7 @@ Guiding principles (MVP):
 - Observability: Changes are written synchronously and surfaced to the user via toasts/logs. There is currently no automatic rollback on failure.
 - Future-proof: Additional fields (e.g., alternate repos, post-create queues) can be versioned without breaking MVP semantics.
 
-### 5.3 Sequence Diagram: The exact sync flow when installing a package
+### 6.3 Sequence Diagram: The exact sync flow when installing a package
 The following top-down flowchart shows the orchestration when the user selects a system package to install in the UI. The goal is to keep the Distrobox and DevContainer universes consistent without forcing unnecessary rebuilds.
 
 <div align="center">
@@ -227,26 +359,26 @@ The following top-down flowchart shows the orchestration when the user selects a
 flowchart TD
   A["UI: Install package 'pkg'"] --> B[Validate request]
   B --> C[Write manifest: add pkg to system_packages]
-  C --> D["distrobox enter <env> -- sudo <pm> install -y pkg (pm detected dynamically)"]
-  D --> E["Update .devcontainer/devcontainer.json: append 'sudo dnf install -y pkg' to postCreateCommand"]
+  C --> D["distrobox enter env -- sudo pm install -y pkg; pm detected dynamically"]
+  D --> E["Update devcontainer.json: append sudo dnf install -y pkg to postCreateCommand"]
   E --> F[Install will apply on next DevContainer rebuild]
   F --> G[Return success or detailed error to UI]
 ```
 </div>
 
-#### 5.3.1 Current behavior and guarantees (MVP):
+#### 6.3.1 Current behavior and guarantees (MVP):
 - Synchronous writes: The manifest and devcontainer.json are updated before attempting the live install. There is no rollback if the install fails; the error is surfaced to the user.
 - Idempotence: Duplicate entries in the manifest are avoided. Live install relies on the package manager’s own idempotence semantics.
 - DevContainer: No live install is performed. Changes apply on the next DevContainer rebuild via postCreateCommand.
 - Resilience: There is no automatic retry/backoff yet; failures are reported to the user.
 
-#### 5.3.2 Planned improvements:
+#### 6.3.2 Planned improvements:
 - Transactional updates (rollback on failure across steps).
 - Retry/backoff policies for transient repo/network errors.
 - Drift detection and adopt/remove flows for manual in-container changes.
 - Optional “Rebuild now” action to apply DevContainer changes immediately.
 
-### 5.3.3 DevContainer orphan cleanup on environment delete
+### 6.3.3 DevContainer orphan cleanup on environment delete
 
 A practical lifecycle problem we encountered in the field is "zombie" DevContainers that outlive their companion Distrobox environment. If a DevContainer remains running after a Distrobox environment is removed, and the user later recreates an environment that reuses the same host path, VS Code may reattach to the orphaned container. Because the orphaned container's mounts and inodes can be stale, this commonly manifests as an empty File Explorer and broken mounts.
 
@@ -266,7 +398,7 @@ Outcome: With a declarative manifest and immediate application in Distrobox, env
 
 ---
 
-### 5.4 State Reconciliation & Drift Detection
+### 6.4 State Reconciliation & Drift Detection
 
 To robustly detect and surface user-installed packages that diverge between the running Distrobox container and the declared manifest, the system uses a baseline/diff strategy combined with machine-readable package queries and strict normalization. This section documents the implementation details and rationale.
 
@@ -310,11 +442,11 @@ This reconciliation strategy provides a practical, low-noise drift detector that
 
 ---
 
-## 6. Storage Orchestration & Resource Management
+## 7. Storage Orchestration & Resource Management
 
 On handhelds and other Bazzite installations with constrained root SSDs, rootless Podman’s default storage location (GraphRoot) quickly accumulates container images and writable layers. Without explicit control, this bloats the primary partition, potentially causing system degradation or atomic update failures. EnvStation provides a guided, safe mechanism to relocate Podman’s per-user storage to a developer-chosen drive, keeping the immutable system lean.
 
-### 6.1 Configuration & State Management
+### 7.1 Configuration & State Management
 When a user allocates a new storage location, the orchestrator performs a controlled reconfiguration of the container engine without requiring elevated privileges:
 * **State Detection:** Reads the active GraphRoot dynamically via `podman info --format '{{.Store.GraphRoot}}'` to ensure UI accuracy.
 * **Configuration Injection:** Writes a user-scoped configuration to `~/.config/containers/storage.conf`, explicitly setting `storage.driver = "overlay"` and `storage.graphroot = "<target>/podman-data"`.
@@ -324,7 +456,7 @@ When a user allocates a new storage location, the orchestrator performs a contro
 
 ```mermaid
 flowchart LR
-  A["User selects target path"] --> B["Query active GraphRoot (podman info)"]
+  A["User selects target path"] -->   B["Query active GraphRoot via podman info"]
   B --> C["Validate mount & filesystem"]
   C -->|invalid| K["Reject selection with explainer"]
   C -->|valid| D["Write ~/.config/containers/storage.conf (overlay, graphroot)"]
@@ -336,15 +468,15 @@ flowchart LR
   H -->|no| J["Surface error (no auto-migration/rollback)"]
 ```
 
-### 6.2 Disk Discovery & Strict Exclusion Logic
+### 7.2 Disk Discovery & Strict Exclusion Logic
 The Rust backend utilizes `sysinfo` to enumerate disks, but applies aggressive filtering to prevent users from bricking their environments.
 
 ```mermaid
 flowchart LR
-  S["Enumerate mounts via sysinfo"] --> N["Normalize paths (/var/home to /home)"]
+  S["Enumerate mounts via sysinfo"] -->   N["Normalize paths: /var/home -> /home"]
   N --> I["Include bases: / and /home"]
   I --> Rm{"Path under /run/media/* ?"}
-  Rm -->|yes| E{"FS allowed? (ext4, btrfs, xfs)"}
+  Rm -->|yes| E{"FS allowed? ext4,btrfs,xfs"}
   Rm -->|no| X["Exclude"]
   E -->|no| X
   E -->|yes| X2["Candidate"]
@@ -363,26 +495,26 @@ flowchart LR
 * **Path Normalization & Representation:** To align with Bazzite/Kinoite rpm-ostree semantics, `/var/home` is normalized to `/home`. In the UI, root (`/`) and home are represented as the user's `HOME` path, ensuring stable comparisons and reflecting Podman’s default behavior.
 
 
-### 6.3 Filesystem & OverlayFS Constraints
+### 7.3 Filesystem & OverlayFS Constraints
 Podman relies on the `overlay` storage driver in rootless mode.
 * `ext4` and `btrfs` are recommended as fully supported, native choices for overlayfs.
 * `xfs` is permitted, but overlayfs strictly requires XFS to be formatted with `ftype=1` (d_type support). While standard on modern desktop installs, the picker does not validate this at selection time.
 
-### 6.4 MVP Limitations & Scope
+### 7.4 MVP Limitations & Scope
 * **No Auto-Migration:** Modifying the GraphRoot does not automatically migrate existing images. Users must re-pull images or manually clean the old location (e.g., `podman system prune`). This deliberate design choice prevents long-running, blocking I/O operations.
 * **User-Scope Only:** Orchestration strictly targets per-user rootless Podman. System-wide daemon configuration is out of scope.
 
-### 6.5 Resiliency & Observability
+### 7.5 Resiliency & Observability
 Drive scanning and configuration are designed to be resilient against missing paths and permission errors. The app avoids modifying transient mounts, surfaces I/O failures with actionable messages, and logs all configuration changes via a unified logging facility for easy troubleshooting.
 
 
 ---
 
-## 7. Performance & I/O Optimization
+## 8. Performance & I/O Optimization
 
 A critical challenge on immutable desktop systems and handheld devices is maintaining a hyper-responsive UI while inspecting massive, deeply nested project trees (e.g., `node_modules` or Rust `target` directories). Naive directory traversal can lead to severe I/O spikes, SSD saturation, and UI thread blocking. EnvStation mitigates these risks through a meticulously tuned, multi-layered I/O orchestration strategy.
 
-### 7.1 Bounded Parallelism & Async Offloading
+### 8.1 Bounded Parallelism & Async Offloading
 To balance throughput with I/O pressure, the architecture explicitly rejects both purely sequential walks (which incur unacceptable latency) and unbounded parallel walks (which saturate the kernel I/O scheduler and trigger thermal throttling on handhelds).
 
 * **Strict Thread Capping:** The Rust backend utilizes `jwalk` backed by a dedicated Rayon thread pool, strictly capped at two worker threads (`Parallelism::RayonNewPool(2)`). This conservative default delivers fast traversal while keeping random read amplification well within the hardware limits of consumer SSDs.
@@ -390,7 +522,7 @@ To balance throughput with I/O pressure, the architecture explicitly rejects bot
 
 * **Non-Blocking Orchestration:** Long-running, I/O-heavy orchestration tasks (for example, environment creation and large scaffolding flows) have been moved to background tasks so the UI thread never blocks. The Command layer now dispatches those tasks via `tauri::async_runtime::spawn` and uses async process execution so the frontend can continue rendering at responsive frame rates (target: 60fps) while progress events stream back to the View layer.
 
-### 7.2 End-to-End Backpressure & Request Coalescing
+### 8.2 End-to-End Backpressure & Request Coalescing
 The system enforces strict pressure controls across the frontend-backend boundary to prevent I/O stampedes during rapid UI navigation.
 
 * **Frontend Concurrency Queue:** The React application implements a strict concurrency queue, ensuring no more than two `get_dir_size` invocations are in-flight simultaneously.
@@ -398,7 +530,7 @@ The system enforces strict pressure controls across the frontend-backend boundar
 * **Event-Driven UI:** Environments deliberately avoid automated background base-scans. Scans are strictly user-driven or event-driven, keeping the application entirely I/O-free while idling.
 * **Global cap:** The combination of a frontend queue width of 2 and a backend walker pool of 2 caps parallel read pressure end-to-end, preventing SSD saturation under rapid navigation.
 
-#### 7.2.1 Visualizing the I/O Optimization Flow
+#### 8.2.1 Visualizing the I/O Optimization Flow
 The following sequence diagram illustrates how request coalescing and positive caching prevent I/O stampedes when multiple UI components request the size of the same directory simultaneously.
 
 ```mermaid
@@ -441,30 +573,30 @@ sequenceDiagram
         Ctx->>IPC: invoke('cancel_dir_size_jobs')
         IPC->>Rust: cancel_dir_size_jobs
         Rust->>Rust: DIR_SIZE_GEN++
-        Note over FS: On next loop check:<br/>generation changed => early exit
+        Note over FS: On next loop check: generation changed => early exit
     end
 ```
 
-### 7.3 State Caching & Fast Cancellation
+### 8.3 State Caching & Fast Cancellation
 To further minimize disk interaction, the architecture relies on aggressive caching and immediate early-exit strategies for stale requests.
 
 * **mtime-Based Positive Caching:** Before initiating a scan, the backend consults a persisted cache keyed by the directory path and its filesystem modification time (`mtime`). If the on-disk `mtime` matches the cache, the size payload is returned instantly, bypassing the filesystem tree entirely. Note: only the root directory mtime is tracked; deep changes that do not update the root mtime may not invalidate the cache. This is an intentional trade-off to minimize I/O.
 * **Generation Token Cancellation:** When a user navigates away from a view, the frontend issues a cancel command. The backend increments a global generation counter (`DIR_SIZE_GEN`). Active walker threads check this token at each iteration and exit immediately if they detect a stale generation, preventing "zombie" I/O tasks from consuming background resources.
 
-### 7.4 Resiliency & System Health
+### 8.4 Resiliency & System Health
 The traversal engine is designed to degrade gracefully without crashing the application or the Rust panic handler.
 
 * **Graceful Fallbacks:** The walker attempts to read lightweight directory entry metadata first (`entry.metadata()`), only falling back to heavy `std::fs::metadata` syscalls on errors.
 * **Safe Arithmetic:** File sizes are accumulated using `saturating_add` to categorically prevent integer overflow panics on exceptionally large dependency trees.
 * **Fault Tolerance:** Transiently unreadable entries or permission-denied errors are safely filtered (not individually logged). They do not abort the surrounding directory scan.
 
-### 7.5 Observability & Diagnostics
+### 8.5 Observability & Diagnostics
 To ensure the orchestrator remains maintainable and that I/O bottlenecks can be accurately diagnosed in the wild, the backend integrates a strictly controlled, structured logging facility. 
 * **Targeted Tracing:** Instead of flooding the standard output with verbose, file-level traces (which would introduce severe I/O overhead of their own), long-running filesystem operations emit precise start/stop markers and key action milestones (e.g., within `space.rs`).
 * **Low-Overhead Auditability:** This targeted observability ensures that maintainers can accurately measure the wall-clock times of specific directory walks and identify slow storage mounts without the "observer effect" (logging overhead) artificially skewing the performance metrics.
 
 
-### 7.6 Renderer & Multi-Monitor Stability
+### 8.6 Renderer & Multi-Monitor Stability
 
 On Wayland sessions and multi-monitor setups with heterogeneous scaling (fractional DPI, different scale factors, or mixed GPU drivers), WebKitGTK's default rendering path can cause visual artifacts such as disappearing headers, missing window controls, or flicker when the application is moved between outputs. To mitigate this class of UX regressions we applied a conservative renderer policy:
 
@@ -481,7 +613,7 @@ Testing guidance:
 * If regressions persist on a specific hardware/driver combination, try the DMABUF/compositing toggles during troubleshooting.
 
 
-### 7.7 Indexer Avoidance for Scaffolds & Relocated Storage
+### 8.7 Indexer Avoidance for Scaffolds & Relocated Storage
 
 Uncontrolled desktop indexers (for example: GNOME Tracker / localsearch-extractor) aggressively crawling large or container-heavy directories can trigger massive disk I/O and, in extreme cases, spin up resource loops that generate repeated failures or coredumps. The orchestrator now proactively minimizes its exposure to these indexers:
 
@@ -497,7 +629,7 @@ Operational notes:
 * The presence of `.trackerignore` is a conservative UX measure; operators can remove it if they intentionally want their projects indexed.
 
 
-### 7.8 Podman-aware Size Calculation & UI Guidance
+### 8.8 Podman-aware Size Calculation & UI Guidance
 
 Deep filesystem walks over Podman's GraphRoot or container layers are a primary source of heavy I/O. To avoid triggering indexers and to reduce disk pressure, the backend prefers Podman's own metadata APIs/CLI for size information rather than recursively summing bytes on the filesystem where possible.
 
@@ -516,11 +648,11 @@ Caveats and compatibility:
 
 ---
 
-## 8. Failure Modes & Error Handling
+## 9. Failure Modes & Error Handling
 
 This chapter outlines how failures are detected and surfaced, and how the backend favors fail-safe behavior based strictly on the current implementation.
 
-### 8.1 What happens when things break?
+### 9.1 What happens when things break?
 
 - Manifest errors:
   - Reading/parsing: get_environment_manifest and install_system_package return explicit errors if .envstation.json cannot be read or parsed. There is no automatic repair of malformed manifests.
@@ -540,7 +672,7 @@ This chapter outlines how failures are detected and surfaced, and how the backen
 - Directory-size scan errors:
   - get_dir_size runs the walker inside spawn_blocking and maps join errors to strings. Cancellation is handled via a generation token; when cancelled, active walkers exit early without returning a size.
 
-### 8.2 Backend “Fail-Safe” philosophy
+### 9.2 Backend “Fail-Safe” philosophy
 
 - Non-destructive defaults:
   - No automatic Podman image migration on storage changes (MVP). Risky long-running I/O is avoided by design.
@@ -552,13 +684,13 @@ This chapter outlines how failures are detected and surfaced, and how the backen
 - Defensive reading/walking:
   - The walker uses lightweight entry.metadata() first, falls back to std::fs::metadata, and accumulates sizes with saturating_add to avoid panics on large trees.
 
-### 8.3 Known limitations (MVP)
+### 9.3 Known limitations (MVP)
 
 - No transactional rollback across steps in install_system_package: if the live install fails, manifest/devcontainer changes remain and will apply on next DevContainer rebuild.
 - apply_storage_setup does not verify final state or rollback on service-control failures; service restarts are best-effort.
 - In SpaceCacheContext, if invoke("get_dir_size") fails, the inflight entry is cleared to allow retries, but existing waiters are not explicitly resolved/rejected by the context; callers should be resilient to missing updates (e.g., retry on demand).
 
-### 8.4 UI surfacing: Toasts and Logs
+### 9.4 UI surfacing: Toasts and Logs
 
 - Toasts: The UI uses a centralized toaster (sonner) to surface success/info/error notifications. The app listens to the backend's app-notification event and maps type to toast severity. Components also invoke toast.* directly for user actions (e.g., starting/stopping containers, package installation, copy/clear on Logs page).
 - Logs: The frontend sends contextual messages via the client_log command; the backend appends them to an in-memory ring buffer and emits app-log events. The Logs page subscribes to app-log and renders an audit trail with copy/clear actions (the previous 'Download' action was removed to reduce UI confusion and avoid browser-specific download behavior). This provides a developer-friendly trace while keeping user-facing toasts concise.
@@ -608,13 +740,13 @@ sequenceDiagram
 
 ---
 
-## 9. Security & Isolation
+## 10. Security & Isolation
 
 This chapter explains how EnvStation achieves *least privilege* on the host while still enabling highly integrated developer workflows.
 
 > 🛡️ **Security Constraint:** Rootless containers significantly reduce the blast radius of user errors and misconfigurations, but they are *not* a perfect sandbox against a malicious project. If you open an untrusted repository, its `postCreateCommand`, build scripts, or dependency install steps can still read/write any paths explicitly mounted into the container.
 
-### 9.1 Rootless Podman & User Space Execution
+### 10.1 Rootless Podman & User Space Execution
 EnvStation is designed to operate entirely within user space on the host, avoiding systemic risk to the immutable OS.
 
 * **User-Scoped Lifecycle:** All container operations (`distrobox create/enter/stop/rm`) are executed as the current user. There are zero host-side `sudo` invocations required to manage environments.
@@ -627,7 +759,7 @@ EnvStation is designed to operate entirely within user space on the host, avoidi
   - Utility functions (for example, `normalize_home_path`) should be used to canonicalize label strings when matching Podman labels (trim trailing slashes and normalize `/var/home` ↔ `/home`).
 * **Container Root vs. Host Root:** The DevContainer scaffolding explicitly sets `remoteUser: "root"`. However, under rootless Podman, this identity is confined to the container namespace. It possesses zero host root privileges and can only mutate host paths explicitly bound and writable by the invoking user.
 
-### 9.2 The Bind-Mount Risk Surface
+### 10.2 The Bind-Mount Risk Surface
 Distrobox environments are intentionally integrated with the host system. The primary integration vector is bind-mounting a "home" directory into the container.
 
 **The Implementation Reality:**
@@ -648,12 +780,12 @@ Distrobox environments are intentionally integrated with the host system. The pr
 
 ---
 
-## 10. Project Structure & Code Guide
+## 11. Project Structure & Code Guide
 
 This chapter documents the modular layout of the EnvStation workspace. It serves as a guide for contributors to ensure that new features adhere to the established separation of concerns and architectural boundaries.
 
 
-### 10.1 The Core-Command-View Pattern
+### 11.1 The Core-Command-View Pattern
 
 The project uses a three-layered approach to ensure a unidirectional data flow and clean dependency isolation.
 
@@ -674,7 +806,7 @@ graph LR
 > 💡 **Architectural Note:** Communication is event-driven: the Commands layer acts as an orchestrator that streams typed state updates (progress, errors, completion) back to the View layer, enabling responsive UI flows and incremental user feedback.
 
 
-### 10.2 Folder Responsibilities
+### 11.2 Folder Responsibilities
 
 ####  Frontend (/src)
 
@@ -694,7 +826,7 @@ graph LR
 
 
 
-### 10.3 Architectural Principles & Scalability
+### 11.3 Architectural Principles & Scalability
 
 The modular layout enforces several key engineering principles:
 
@@ -705,7 +837,7 @@ The modular layout enforces several key engineering principles:
   - Commands are covered via integration tests focusing on orchestration and side effects.
 - Performance Isolation: I/O-heavy operations (like directory walking) are localized in core and constrained via bounded parallelism and cancellation tokens to protect system health.
 
-### 10.4 Practical Contribution Guidelines
+### 11.4 Practical Contribution Guidelines
 
 - UI Development: Favor functional, presentational components in src/components/. Use Context providers only when multiple views must share the same data source.
 - Rust Commands: Keep them concise and non-blocking. A command should: 1. Validate input, 2. Invoke core APIs (business logic), 3. Persist state, and 4. Orchestrate background work and stream progress to the UI. Long-running or I/O-heavy commands MUST be async, use `tokio::process::Command` (or `build_host_command_async`) for non-blocking process execution, and dispatch the background task using `tauri::async_runtime::spawn`. Prefer `build_host_command_async()` when invoking host-level CLIs (e.g., Podman) so development-time Distrobox execution is transparently delegated to the host. Commands should use `app.emit()` to provide real-time, typed progress events (and `app.emit()` for completion/error notifications) rather than returning only a final result — this preserves a responsive front-end and aligns with the event-driven Command → View pattern.
@@ -713,14 +845,14 @@ The modular layout enforces several key engineering principles:
 - Error Propagation: Always return Result<T, String> from commands to ensure the UI can gracefully surface errors via the unified logging system.
 
 
-### 10.5 Evolution & Compatibility
+### 11.5 Evolution & Compatibility
 
 - Migration via Re-exports: To maintain a stable public API during internal refactors, utilize small re-export stubs at the crate root (pub use commands::env;) if external consumers expect legacy paths.
 - Incremental Refactors: Large architectural changes should be split into atomic PRs. For every file move, verify that imports are updated and that the binary compiles without legacy "dead-code" artifacts.
 
 ---
 
-## 11. CI/CD & Delivery Architecture
+## 12. CI/CD & Delivery Architecture
 While not strictly part of the core application binary, the continuous integration and deployment pipeline is a critical architectural boundary for quality assurance and release management. The project relies on GitHub Actions to enforce the "GitHub Flow" model.
 
 - Continuous Integration (CI): All Pull Requests targeting the main branch are gated by a mandatory ci-build job. This job provisions an Ubuntu runner with the required GTK/WebKit dependencies and executes both frontend builds (npm run build) and backend validation (cargo check). Code cannot be merged unless this pipeline passes, ensuring the main branch remains permanently stable.

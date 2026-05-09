@@ -61,6 +61,12 @@ pub fn run() {
             commands::logs::client_log,
             // Window
             windowcmds::drag_window,
+            // EnvShare (PAT storage)
+            crate::commands::envshare::get_github_pat,
+            crate::commands::envshare::set_github_pat,
+            // EnvShare (share)
+            crate::commands::envshare::share_environment,
+            crate::commands::envshare::import_environment,
         ])
         .setup(|app| {
             // Environment diagnostics for Wayland/X11
