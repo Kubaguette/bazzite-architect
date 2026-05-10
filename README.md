@@ -128,6 +128,9 @@ Each environment includes a starter manifest and suggested VS Code extensions.
 | Security model | varies by setup | rootless Podman with controlled mounts |
 | Drift handling | manual reconciliation | manifest-driven sync |
 | Disk management | manual moves | guided storage relocation |
+| Onboarding / Ease of use | steep learning curve, many CLI commands and manual steps | GUI-driven templates and one-click environment creation; get started in minutes |
+| Environment sharing (EnvShare) | ad-hoc scripts, copy-paste instructions, and heavy manual reproduction | export/import a tiny manifest (.envstation.json) via Gist; reproducible, privacy-first sharing |
+| Immutable-host compatibility | requires manual workarounds (OSTree, GraphRoot moves) and per-distro fiddling | built for immutable distros: guided OSTree/RPM workflows and automated Podman GraphRoot relocation |
 
 ---
 
