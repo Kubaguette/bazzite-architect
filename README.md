@@ -35,45 +35,64 @@ The missing Control Center for reproducible environments using [Distrobox](https
 
 ## Introduction
 
-**EnvStation** is a lightweight, distro-agnostic desktop application designed to simplify and synchronize development environments on immutable Linux distributions. 
+EnvStation is a lightweight, distro-agnostic desktop application designed to solve the "split-brain" container problem on immutable Linux distributions.
 
-Built with a **Rust** backend and a **React/Tauri** frontend, it seamlessly manages the interplay between **Distrobox** and **DevContainers**. By utilizing a single manifest as the "source of truth," EnvStation ensures your host terminal and IDE environment remain perfectly aligned—all while respecting the architectural constraints of a read-only root filesystem.
+On systems like Bazzite, Fedora Silverblue, or SteamOS, the host operating system is read-only. Developers are forced to use containers, which in practice often leads to two fragmented workflows for the same project: **DevContainers** for the IDE and **Distrobox** for the native host terminal. Keeping these two separate environments manually in sync is tedious, time-consuming, and error-prone.
 
-For a technical deep dive into the synchronization logic, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+EnvStation acts as the intelligent bridge between these worlds. The application uses a single manifest (`.envstation.json`) as the "single source of truth" and orchestrates the interplay between Distrobox and DevContainers. This ensures that your host terminal and your IDE environment remain perfectly aligned at all times.
 
 ---
+
 ## Why EnvStation?
 
-Traditional development workflows often break on **immutable distributions** (like Bazzite, Fedora Silverblue, or Arch Linux). EnvStation fixes this by acting as the intelligent bridge between your host terminal and your IDE.
+If you've ever installed a package in your native terminal, only to realize later that your IDE language server can't find it (because it's running in a different container context), you know the pain. EnvStation eliminates this friction.
 
-### 1. Unified Environment Parity
-On immutable systems, your host is read-only. Usually, your dependencies are trapped inside a DevContainer, leaving your native host terminal (Ptyxis, Alacritty) "dumb."
-* **The Solution:** EnvStation mirrors your environment across **Distrobox** (for your native terminal) and **DevContainers** (for your IDE).
-* **The Result:** Run `gcc`, `python`, or `git` anywhere—inside or outside of VS Code—without configuring it twice.
+### Key Benefits
 
-### 2. Intelligent Drift Detection
-Manual changes in the terminal are inevitable—but they often lead to "snowflake" environments that are impossible to reproduce. EnvStation keeps you in control:
-* **Smart Baseline:** Instead of cluttering your view with hundreds of pre-installed system packages, EnvStation snapshots the environment the moment it's created. This ensures you only see the packages *you* actually added.
-* **No More Guesswork:** The app detects when your container, your VS Code setup, and your configuration file fall out of sync.
-* **One-Click Sync:** If things "drift" apart, EnvStation offers a simple fix: a single click to bring all layers back into perfect alignment.
+#### 1. The End of "Split-Brain" Environments (Unified Parity)
+Run tools like `gcc`, `python`, or `git` natively in your preferred terminal and simultaneously in your IDE, without having to configure everything twice.
 
-**The Result:** Your environments stay clean, slim, and—most importantly—reproducible, no matter how much you experiment in the terminal.
+<details>
+<summary><b>How the synchronization works</b></summary>
 
-### 3. Abstracting the Complexity
-You shouldn't need a PhD in Container-Orchestration just to write "Hello World."
-* **No Terminal Acrobatics:** Manage Podman and Distrobox through a clean GUI. No more memorizing cryptic flags or complex volume mount syntax.
-* **Safe Defaults:** Automatically handles tricky technical hurdles like **Podman GraphRoot relocation**—a common point of failure on immutable systems.
-* **Ready in under 2 Minutes:** Choose from pre-configured templates (Python, Rust, C++, etc.) and go from zero to "ready-to-code" in three clicks.
+> EnvStation generates an environment that serves both masters. When you open your project in VS Code, the IDE seamlessly connects to the exact same container context that powers your native host terminal via Distrobox. One container, one shared state, zero fragmentation.
 
-### 4. Sharing Environment Setups
-Share only the small .envstation.json (no source or large files) so teammates can recreate your environment quickly.
+</details>
 
-* **Export a tiny manifest:** Publish the `.envstation.json` to a GitHub Gist and copy the short URL.
-* **Recreate in two clicks:** Import a Gist to write the manifest and start creation; if it matches the same name, EnvStation treats it as an update.
-* **Privacy-first:** The PAT is stored locally and manifests contain no secrets. Gists are public—share deliberately.
+#### 2. Intelligent Drift Detection
+Manual terminal changes are often inevitable—but they frequently lead to "snowflake" environments that are impossible to reproduce. EnvStation gives you control back.
 
-> **EnvStation is the Control Center for your development flow.** It combines the isolation of containers with the comfort of a native OS, ensuring your manifest remains the single source of truth.
+<details>
+<summary><b>Preventing inconsistent environments</b></summary>
 
+> EnvStation takes a snapshot of the environment immediately after its creation. If you manually install packages via the terminal, the app instantly detects that your container and your manifest (`.envstation.json`) have "drifted" apart. With a single click, EnvStation offers the solution: easily adopt those changes into your manifest to guarantee the reproducibility of your setup at any time.
+
+</details>
+
+#### 3. Complexity Abstracted
+You shouldn't need expert knowledge in container orchestration just to set up a development environment.
+
+<details>
+<summary><b>Automating technical hurdles</b></summary>
+
+> Manage Podman and Distrobox through a clean graphical interface. You no longer need to memorize cryptic CLI flags or complex volume mount syntax. EnvStation automatically handles difficult hurdles like **Podman GraphRoot Relocation**—a common source of errors on immutable systems. Simply choose from pre-configured templates (Python, Rust, C++, etc.) and get started in under two minutes.
+
+</details>
+
+#### 4. Sharing Environment Setups (EnvShare)
+Share only the compact manifest (`.envstation.json`) so teammates can reproduce your exact environment within seconds.
+
+<details>
+<summary><b>The EnvShare workflow in detail</b></summary>
+
+> * **Export a tiny manifest:** Publish the `.envstation.json` directly to a GitHub Gist and copy the generated Gist URL. Manifests contain no secrets or source code, only the configuration.
+> * **Replicate in two clicks:** Import a Gist URL to save the manifest locally and start the creation process. EnvStation reconstructs the exact container, including all specific packages.
+> * **Privacy-First:** Your Personal Access Token (PAT) is stored exclusively locally on your system. Since Gists are public, you share your environments deliberately and securely.
+
+</details>
+
+---
+> **EnvStation is the control center for your development workflow.** It combines the isolation of containers with the comfort of a native OS.
 ---
 
 ## Key Technical Features
@@ -109,6 +128,9 @@ Each environment includes a starter manifest and suggested VS Code extensions.
 | Security model | varies by setup | rootless Podman with controlled mounts |
 | Drift handling | manual reconciliation | manifest-driven sync |
 | Disk management | manual moves | guided storage relocation |
+| Onboarding / Ease of use | steep learning curve, many CLI commands and manual steps | GUI-driven templates and one-click environment creation; get started in minutes |
+| Environment sharing (EnvShare) | ad-hoc scripts, copy-paste instructions, and heavy manual reproduction | export/import a tiny manifest (.envstation.json) via Gist; reproducible, privacy-first sharing |
+| Immutable-host compatibility | requires manual workarounds (OSTree, GraphRoot moves) and per-distro fiddling | built for immutable distros: guided OSTree/RPM workflows and automated Podman GraphRoot relocation |
 
 ---
 
@@ -136,159 +158,75 @@ I found myself trapped in a **"Nightmare Setup"**:
 I built this tool to ensure that no developer has to waste hours on environment plumbing again. EnvStation bridges the gap, providing a frictionless, native-feeling UI to manage what used to be a complex, manual process.
 
 ---
-
 ## Quick Start & Requirements
 
-These steps are intentionally concise. Expand them to match your environment and distribution.
+### 🛠️ Prerequisites
+EnvStation relies on native container technologies. Before installing, ensure your system has:
+- **Podman** (running rootless)
+- **Distrobox** (for host-container integration)
 
-### Prerequisites (common)
-- An immutable Linux host (Bazzite / Kinoite / Fedora Silverblue / SteamOS, etc.)
-- Podman (rootless) available on the host
-- Distrobox installed for comfortable host-container integration
-- Node >= 18 and npm or pnpm (for frontend development)
-- Rust (stable) + cargo (for backend build)
+<details>
+<summary>💡 Need to install Podman & Distrobox? (Click to expand)</summary>
 
-Verify Podman and Distrobox are available:
+* **Fedora / RHEL:** `sudo dnf install -y podman distrobox`
+* **Ubuntu / Debian:** `sudo apt install -y podman distrobox`
+* **Arch Linux:** `sudo pacman -Syu podman distrobox`
+
+**Important:** Ensure the Podman socket is enabled for your user:
 ```bash
-podman --version
-distrobox --version
-podman info   # ensures Podman can run for your user
-# If you use the Podman API/socket with other tools, enable it:
 systemctl --user enable --now podman.socket
 ```
+</details>
 
 ---
 
-### Installation (End-User)
-EnvStation is currently distributed as native packages (.deb and .rpm). Choose the option that fits your distro and policy.
+### 🚀 Installation (End-User)
+Grab the latest release for your distribution from the [Releases](https://github.com/Kubaguette/envstation/releases) page.
 
-#### Debian / Ubuntu (.deb)
+**Fedora / RHEL (.rpm)**
 ```bash
-# Newer apt supports local .deb install:
+# Immutable Hosts (Bazzite / Silverblue / Kinoite)
+sudo rpm-ostree install ./EnvStation-1.1.0-1.x86_64.rpm
+systemctl reboot # Reboot required to apply OSTree deployment
+
+# Traditional Mutable Hosts
+sudo dnf install ./EnvStation-1.1.0-1.x86_64.rpm
+```
+
+**Debian / Ubuntu (.deb)**
+```bash
 sudo apt update
 sudo apt install ./EnvStation_1.1.0_amd64.deb
-
-# Or with dpkg + fix dependencies:
-sudo dpkg -i EnvStation_1.1.0_amd64.deb
-sudo apt-get install -f
 ```
 
-#### Fedora / RHEL Immutable Hosts (Silverblue / Bazzite / Kinoite)
-On OSTree-based immutable systems you cannot use `sudo dnf` to install host packages. Use rpm-ostree and reboot to apply the deployment:
+**Arch Linux (.pkg.tar.zst)**
 ```bash
-# Install to the immutable OSTree deployment (example):
-sudo rpm-ostree install ./EnvStation-1.1.0.x86_64.rpm
-# A system reboot is required to apply the new deployment
-sudo systemctl reboot
-```
-Notes:
-- rpm-ostree performs an atomic OSTree deployment. The package is staged and becomes active after reboot.
-- If you prefer not to reboot or modify the host image, use the AppImage instead.
-
-#### Fedora / RHEL (traditional, mutable systems)
-If you are on a mutable Fedora/RHEL workstation (not OSTree-based), you can install with dnf:
-```bash
-sudo dnf install ./EnvStation-1.1.0.x86_64.rpm
-```
-
-#### Arch Linux (pkg.tar.zst or AUR)
-Arch users typically install using a package in pacman format or from the AUR if available:
-```bash
-# If you have a built pacman package:
 sudo pacman -U ./envstation-1.1.0-1-x86_64.pkg.tar.zst
-
-# Or install from AUR using an AUR helper (if package published):
-paru -S envstation   # or yay -S envstation
 ```
-If no Arch package is available, prefer the AppImage or build from source.
-
-#### AppImage
-
-Comming soon.
 
 ---
 
-#### Notes:
-- Make sure Podman and Distrobox are installed and working before running EnvStation. EnvStation expects rootless Podman for normal operation.
-- On OSTree-based systems (Silverblue / Bazzite / Kinoite) prefer the AppImage or use rpm-ostree and reboot to install host packages.
-- For RHEL / CentOS you may prefer to use EPEL or the distro's packaging tools to get Podman and its dependencies.
+### 💻 Development Mode
+Since the target host OS is usually immutable, all development should occur inside a mutable container (Distrobox/Toolbox).
 
----
-
-### Installing Podman & Distrobox (examples, skip if installed)
-
-#### Fedora / RHEL:
+**1. Create / Enter your dev container:**
 ```bash
-sudo dnf install -y podman distrobox
-systemctl --user enable --now podman.socket
-```
-
-#### Ubuntu / Debian (example: 22.04+):
-```bash
-sudo apt update
-sudo apt install -y podman distrobox
-# If distrobox isn't available on your Ubuntu version, see:
-# https://github.com/89luca89/distrobox or the upstream distrobox README
-```
-
-#### Arch:
-```bash
-sudo pacman -Syu podman distrobox
-systemctl --user enable --now podman.socket
-```
-
-If a distribution does not ship distrobox or a recent Podman, follow the official upstream instructions:
-- Podman: https://podman.io/getting-started/installation
-- Distrobox: https://github.com/89luca89/distrobox
-
----
-
-### Installation (developer mode)
-
-Development should run inside a mutable container (distrobox/toolbox) because the host OS is immutable. Example:
-
-```bash
-# create or enter a mutable development container
-# distrobox create --name devbox --image registry.fedoraproject.org/fedora-toolbox:latest --yes
 distrobox enter devbox
 ```
 
-1. Clone and install JS deps
+**2. Install native dependencies (inside the container):**
+Depending on your container's base image, install the required Tauri dependencies:
+* **Fedora:** `sudo dnf install -y webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel gtk3-devel gcc gcc-c++ make xdg-utils`
+* **Ubuntu/Debian:** `sudo apt install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev libgtk-3-dev build-essential xdg-utils`
+* **Arch:** `sudo pacman -Syu webkit2gtk libappindicator-gtk3 librsvg gtk3 base-devel xdg-utils`
+
+**3. Clone & Run:**
 ```bash
-git clone https://github.com/Kubaguette/envstation.git
+git clone [https://github.com/Kubaguette/envstation.git](https://github.com/Kubaguette/envstation.git)
 cd envstation
 npm install
-```
-
-2. Install native dev dependencies (common packages vary by distro)
-
-#### Fedora / Bazzite / Kinoite (dnf)
-```bash
-sudo dnf install -y webkit2gtk4.1-devel libappindicator-gtk3-devel librsvg2-devel gtk3-devel gcc gcc-c++ make xdg-utils fuse
-```
-
-#### Ubuntu / Debian (apt)
-```bash
-sudo apt update
-sudo apt install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev libgtk-3-dev build-essential xdg-utils fuse
-# package names can vary by Ubuntu version; if a package is missing, search with apt-cache search
-```
-
-#### Arch (pacman)
-```bash
-sudo pacman -Syu webkit2gtk libappindicator-gtk3 librsvg gtk3 base-devel xdg-utils fuse
-# Arch package names may differ slightly; use pacman -Ss to confirm exact names
-```
-
-3. Start the unified dev workflow
-```bash
 npm run tauri dev
 ```
-
-Notes:
-- `npm run tauri dev` compiles the Rust backend and starts the Vite dev server together. You may need PKG_CONFIG and other env vars for WebKit bindings.
-- If you run into missing headers or pkg-config errors, double-check the dev packages above for your distro and install pkg-config if required.
-
 ---
 ## Contributing
 
