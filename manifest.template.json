@@ -1,0 +1,50 @@
+{
+    "app-id": "com.github.kubaguette.EnvStation",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "47",
+    "sdk": "org.gnome.Sdk",
+    "command": "envstation",
+    "sdk-extensions": [
+        "org.freedesktop.Sdk.Extension.node20",
+        "org.freedesktop.Sdk.Extension.rust-stable"
+    ],
+    "finish-args": [
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--socket=wayland",
+        "--filesystem=host",
+        "--talk-name=org.freedesktop.Flatpak"
+    ],
+    "build-options": {
+        "append-path": "/usr/lib/sdk/node20/bin:/usr/lib/sdk/rust-stable/bin",
+        "env": {
+            "PATH": "/usr/lib/sdk/node20/bin:/usr/lib/sdk/rust-stable/bin:/usr/bin:/bin",
+            "npm_config_offline": "true",
+            "npm_config_cache": "/run/build/envstation/flatpak-node/cache",
+            "CARGO_HOME": "/run/build/envstation/cargo-home",
+            "CARGO_NET_OFFLINE": "true"
+        }
+    },
+    "modules": [
+        {
+            "name": "envstation",
+            "buildsystem": "simple",
+            "build-commands": [
+                "npm install --offline",
+                "mkdir -p src-tauri/.cargo",
+                "echo '[source.crates-io]' > src-tauri/.cargo/config.toml",
+                "echo 'replace-with = \"vendored-sources\"' >> src-tauri/.cargo/config.toml",
+                "echo '[source.vendored-sources]' >> src-tauri/.cargo/config.toml",
+                "echo 'directory = \"../cargo/vendor\"' >> src-tauri/.cargo/config.toml",
+                "npm run tauri build -- --no-bundle",
+                "install -Dm755 src-tauri/target/release/envstation -t /app/bin/"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "."
+                }
+            ]
+        }
+    ]
+}
