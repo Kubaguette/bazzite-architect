@@ -35,18 +35,6 @@ The missing Control Center for reproducible environments using [Distrobox](https
 
 ## Introduction
 
-**EnvStation** is a lightweight, distro-agnostic desktop application designed to solve the "split-brain" container problem on immutable Linux distributions.
-
-On systems like Bazzite or Fedora Silverblue, the host OS is read-only. Developers are forced to use containers, typically resulting in two fragmented workflows for the same project: **DevContainers** for the IDE, and **Distrobox** for the native host terminal. Keeping these two separate environments manually in sync is tedious and error-prone.
-
-Built with a **Rust** backend and a **React/Tauri** frontend, EnvStation acts as the intelligent bridge. It utilizes a single `.envstation.json` manifest as the absolute source of truth, effortlessly orchestrating the interplay between Distrobox and DevContainers to ensure your host terminal and IDE environment remain perfectly aligned.
-
-For a technical deep dive into the synchronization logic, see [ARCHITECTURE.md](./ARCHITECTURE.md).
-
----
-
-## Introduction
-
 EnvStation is a lightweight, distro-agnostic desktop application designed to solve the "split-brain" container problem on immutable Linux distributions.
 
 On systems like Bazzite, Fedora Silverblue, or SteamOS, the host operating system is read-only. Developers are forced to use containers, which in practice often leads to two fragmented workflows for the same project: **DevContainers** for the IDE and **Distrobox** for the native host terminal. Keeping these two separate environments manually in sync is tedious, time-consuming, and error-prone.
