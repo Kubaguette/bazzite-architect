@@ -1,0 +1,60 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.github.kubaguette.EnvStation</id>
+  
+  <name>EnvStation</name>
+  <summary>The missing Control Center for reproducible environments using Distrobox and Devcontainers.</summary>
+  
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license> <developer_name>Kubaguette</developer_name>
+  
+  <description>
+    <p>
+      EnvStation is a modern, fast, and intuitive manager for Distrobox containers. 
+      It allows you to visualize, create, and manage your development environments 
+      without touching the terminal.
+    </p>
+    <ul>
+      <li>List all active and inactive Distrobox containers</li>
+      <li>Create new environments with a few clicks</li>
+      <li>Start, stop, and delete containers easily</li>
+      <li>Seamless integration with your host system via flatpak-spawn</li>
+    </ul>
+    <p>
+      Perfect for developers on immutable distributions like Bazzite, Fedora Silverblue, or SteamOS.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">com.github.kubaguette.EnvStation.desktop</launchable>
+  
+  <screenshots>
+    <screenshot type="default">
+      <caption>The main dashboard showing all environments</caption>
+      <image>https://raw.githubusercontent.com/Kubaguette/EnvStation/main/assets/screenshots/main.png</image>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/Kubaguette/EnvStation</url>
+  <url type="bugtracker">https://github.com/Kubaguette/EnvStation/issues</url>
+  <url type="vcs-browser">https://github.com/Kubaguette/EnvStation</url>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="1.1.0" date="2026-05-10">
+      <description>
+        <p>First stable release with Flatpak support and host communication.</p>
+      </description>
+    </release>
+  </releases>
+
+  <provides>
+    <binary>envstation</binary>
+  </provides>
+
+  <categories>
+    <category>Development</category>
+    <category>Utility</category>
+    <category>System</category>
+  </categories>
+</component>
