@@ -11,14 +11,15 @@
   <description>
     <p>
       EnvStation is a modern, fast, and intuitive manager for Distrobox containers. 
-      It allows you to visualize, create, and manage your development environments 
-      without touching the terminal.
+      It acts as the intelligent bridge between your host system and your IDE, allowing you to visualize, create, and manage your development environments without touching the terminal.
     </p>
     <ul>
-      <li>List all active and inactive Distrobox containers</li>
-      <li>Create new environments with a few clicks</li>
-      <li>Start, stop, and delete containers easily</li>
-      <li>Seamless integration with your host system via flatpak-spawn</li>
+      <li>Unified Parity: Keep your native host terminal (Distrobox) and IDE (DevContainers) perfectly in sync.</li>
+      <li>Intelligent Drift Detection: Automatically detect manual terminal changes and adopt them into your manifest with one click.</li>
+      <li>EnvShare: Export and import environment manifests securely via GitHub Gists to share setups with your team.</li>
+      <li>Storage Management: Handle complex tasks like Podman GraphRoot relocation easily through the graphical interface.</li>
+      <li>Pre-configured Templates: Get started with Python, Node, Rust, Java, C++, and C# environments in under two minutes.</li>
+      <li>Distro-agnostic: Mix and manage Arch, Ubuntu, Fedora, and Alpine containers effortlessly.</li>
     </ul>
     <p>
       Perfect for developers on immutable distributions like Bazzite, Fedora Silverblue, or SteamOS.
@@ -28,10 +29,28 @@
   <launchable type="desktop-id">com.github.kubaguette.EnvStation.desktop</launchable>
   
   <screenshots>
+    <screenshots>
     <screenshot type="default">
-      <caption>The main dashboard showing all environments</caption>
-      <image>https://raw.githubusercontent.com/Kubaguette/EnvStation/main/assets/screenshots/main.png</image>
+      <caption>Main dashboard for new environments</caption>
+      <image>https://raw.githubusercontent.com/Kubaguette/bazzite-architect/main/flathub_screenshots/screen1.png</image>
     </screenshot>
+    <screenshot>
+      <caption>Creating a new environment</caption>
+      <image>https://raw.githubusercontent.com/Kubaguette/bazzite-architect/main/flathub_screenshots/screen2.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Container management details (multiple distros)</caption>
+      <image>https://raw.githubusercontent.com/Kubaguette/bazzite-architect/main/flathub_screenshots/screen3.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Storage migration</caption>
+      <image>https://raw.githubusercontent.com/Kubaguette/bazzite-architect/main/flathub_screenshots/screen4.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Settings</caption>
+      <image>https://raw.githubusercontent.com/Kubaguette/bazzite-architect/main/flathub_screenshots/screen5.png</image>
+    </screenshot>
+  </screenshots>
   </screenshots>
 
   <url type="homepage">https://github.com/Kubaguette/EnvStation</url>
