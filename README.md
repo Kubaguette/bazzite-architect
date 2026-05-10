@@ -45,45 +45,66 @@ For a technical deep dive into the synchronization logic, see [ARCHITECTURE.md](
 
 ---
 
+## Introduction
+
+EnvStation is a lightweight, distro-agnostic desktop application designed to solve the "split-brain" container problem on immutable Linux distributions.
+
+On systems like Bazzite, Fedora Silverblue, or SteamOS, the host operating system is read-only. Developers are forced to use containers, which in practice often leads to two fragmented workflows for the same project: **DevContainers** for the IDE and **Distrobox** for the native host terminal. Keeping these two separate environments manually in sync is tedious, time-consuming, and error-prone.
+
+EnvStation acts as the intelligent bridge between these worlds. The application uses a single manifest (`.envstation.json`) as the "single source of truth" and orchestrates the interplay between Distrobox and DevContainers. This ensures that your host terminal and your IDE environment remain perfectly aligned at all times.
+
+---
+
 ## Why EnvStation?
 
-If you've ever installed a package in your native terminal, only to realize your IDE language server can't find it because it's running in a different container, you know the pain. EnvStation fixes this by keeping everything perfectly in sync.
+If you've ever installed a package in your native terminal, only to realize later that your IDE language server can't find it (because it's running in a different container context), you know the pain. EnvStation eliminates this friction.
 
-### 🌟 Key Benefits
+### Key Benefits
 
-<strong>1. The End of "Split-Brain" Environments (Unified Parity)</strong> Run tools like <code>gcc</code> or <code>python</code> natively in your terminal <em>and</em> your IDE, without configuring anything twice.
+#### 1. The End of "Split-Brain" Environments (Unified Parity)
+Run tools like `gcc`, `python`, or `git` natively in your preferred terminal and simultaneously in your IDE, without having to configure everything twice.
+
 <details>
-<summary>🔍 How it works (Distrobox + DevContainers)</summary>
-EnvStation generates an environment that serves both masters. When you open your project in VS Code, it seamlessly attaches to the exact same container context that powers your native host terminal via Distrobox. One container, one state, zero fragmentation.
-</details>
-<br>
+<summary><b>How the synchronization works</b></summary>
 
-<strong>2. Intelligent Drift Detection</strong> Never lose track of manual terminal changes again. 
+> EnvStation generates an environment that serves both masters. When you open your project in VS Code, the IDE seamlessly connects to the exact same container context that powers your native host terminal via Distrobox. One container, one shared state, zero fragmentation.
+
+</details>
+
+#### 2. Intelligent Drift Detection
+Manual terminal changes are often inevitable—but they frequently lead to "snowflake" environments that are impossible to reproduce. EnvStation gives you control back.
+
 <details>
-<summary>🔍 How it prevents "Snowflake" Environments</summary>
-EnvStation snapshots your environment right after creation. If you install a package manually via the terminal, the app detects that your container and your <code>.envstation.json</code> have "drifted" apart. With a single click, you can adopt those changes into your manifest, keeping your setup 100% reproducible.
-</details>
-<br>
+<summary><b>Preventing inconsistent environments</b></summary>
 
-<strong>3. Complexity Abstracted</strong> Go from zero to "ready-to-code" in under 2 minutes—no terminal acrobatics required.
+> EnvStation takes a snapshot of the environment immediately after its creation. If you manually install packages via the terminal, the app instantly detects that your container and your manifest (`.envstation.json`) have "drifted" apart. With a single click, EnvStation offers the solution: easily adopt those changes into your manifest to guarantee the reproducibility of your setup at any time.
+
+</details>
+
+#### 3. Complexity Abstracted
+You shouldn't need expert knowledge in container orchestration just to set up a development environment.
+
 <details>
-<summary>🔍 What we automate for you</summary>
-Manage Podman and Distrobox through a clean GUI. No more memorizing cryptic flags. We also automatically handle tricky technical hurdles like <strong>Podman GraphRoot relocation</strong>—a common point of failure on immutable systems.
-</details>
-<br>
+<summary><b>Automating technical hurdles</b></summary>
 
-<strong>4. Instant Environment Sharing (EnvShare)</strong> Share your complete development setup via a tiny URL.
+> Manage Podman and Distrobox through a clean graphical interface. You no longer need to memorize cryptic CLI flags or complex volume mount syntax. EnvStation automatically handles difficult hurdles like **Podman GraphRoot Relocation**—a common source of errors on immutable systems. Simply choose from pre-configured templates (Python, Rust, C++, etc.) and get started in under two minutes.
+
+</details>
+
+#### 4. Sharing Environment Setups (EnvShare)
+Share only the compact manifest (`.envstation.json`) so teammates can reproduce your exact environment within seconds.
+
 <details>
-<summary>🔍 The EnvShare Workflow</summary>
-<ul>
-<li><strong>Export:</strong> Publish your lightweight <code>.envstation.json</code> directly to a GitHub Gist.</li>
-<li><strong>Import:</strong> Teammates paste the URL and EnvStation reconstructs the exact container—including all custom packages.</li>
-<li><strong>Privacy-First:</strong> Your Personal Access Token (PAT) never leaves your local machine.</li>
-</ul>
-</details>
-<br>
+<summary><b>The EnvShare workflow in detail</b></summary>
 
-> **EnvStation combines the isolation of containers with the comfort of a native OS.** Your manifest remains the single source of truth.
+> * **Export a tiny manifest:** Publish the `.envstation.json` directly to a GitHub Gist and copy the generated Gist URL. Manifests contain no secrets or source code, only the configuration.
+> * **Replicate in two clicks:** Import a Gist URL to save the manifest locally and start the creation process. EnvStation reconstructs the exact container, including all specific packages.
+> * **Privacy-First:** Your Personal Access Token (PAT) is stored exclusively locally on your system. Since Gists are public, you share your environments deliberately and securely.
+
+</details>
+
+---
+> **EnvStation is the control center for your development workflow.** It combines the isolation of containers with the comfort of a native OS.
 ---
 
 ## Key Technical Features
