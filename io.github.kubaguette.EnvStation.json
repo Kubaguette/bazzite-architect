@@ -1,5 +1,5 @@
 {
-    "app-id": "com.github.kubaguette.EnvStation",
+    "app-id": "io.github.kubaguette.EnvStation",
     "runtime": "org.gnome.Platform",
     "runtime-version": "47",
     "sdk": "org.gnome.Sdk",
@@ -38,9 +38,9 @@
                 "echo 'directory = \"../cargo/vendor\"' >> src-tauri/.cargo/config.toml",
                 "npm run tauri build -- --no-bundle",
                 "install -Dm755 src-tauri/target/release/envstation -t /app/bin/",
-                "install -Dm644 com.github.kubaguette.EnvStation.metainfo.xml -t /app/share/metainfo/",
-                "install -Dm644 com.github.kubaguette.EnvStation.desktop -t /app/share/applications/",
-                "install -Dm644 src-tauri/icons/icon.png -T /app/share/icons/hicolor/512x512/apps/com.github.kubaguette.EnvStation.png"
+                "install -Dm644 io.github.kubaguette.EnvStation.metainfo.xml -t /app/share/metainfo/",
+                "install -Dm644 io.github.kubaguette.EnvStation.desktop -t /app/share/applications/",
+                "install -Dm644 src-tauri/icons/icon.png -T /app/share/icons/hicolor/512x512/apps/io.github.kubaguette.EnvStation.png"
             ],
             "sources": [
                 {
