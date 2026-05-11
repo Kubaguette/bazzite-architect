@@ -1,6 +1,6 @@
 [package]
 name = "envstation"
-version = "1.1.0"
+version = "1.1.1"
 description = "EnvStation"
 authors = ["Kubaguette"]
 license = "GPL-3.0-or-later"

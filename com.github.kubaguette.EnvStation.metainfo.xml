@@ -60,7 +60,7 @@
   <content_rating type="oars-1.1" />
 
   <releases>
-    <release version="1.1.0" date="2026-05-10">
+    <release version="1.1.1" date="2026-05-11">
       <description>
         <p>First stable release with Flatpak support and host communication.</p>
       </description>
