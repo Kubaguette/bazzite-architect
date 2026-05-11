@@ -2,7 +2,7 @@
 Name=EnvStation
 Comment=Control Center for reproducible environments using Distrobox and Devcontainers
 Exec=envstation
-Icon=com.github.kubaguette.EnvStation
+Icon=io.github.kubaguette.EnvStation
 Terminal=false
 Type=Application
 Categories=Development;Utility;System;

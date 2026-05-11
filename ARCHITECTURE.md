@@ -876,13 +876,13 @@ We distribute EnvStation on Flathub using a Flatpak manifest-based build. This s
 
 Key files and their purpose
 
-- `manifest.template.json` and `com.github.kubaguette.EnvStation.json`: The core Flatpak manifests that define the build process. They enumerate modules (source fetches and build steps), permissions, build-options and runtime metadata used by `flatpak-builder`/Flathub. The templates contain policies for required permissions (for example: access to portions of the host filesystem when necessary and explicit `finish-args` such as allowing `--talk-name=org.freedesktop.Flatpak` or `--talk-name=org.freedesktop.Flatpak`-adjacent permissions). They also declare the use of `flatpak-spawn` where the application needs to delegate execution back to the host, and include module definitions for building the Rust backend, bundling the frontend assets, and packaging auxiliary resources.
+- `manifest.template.json` and `io.github.kubaguette.EnvStation.json`: The core Flatpak manifests that define the build process. They enumerate modules (source fetches and build steps), permissions, build-options and runtime metadata used by `flatpak-builder`/Flathub. The templates contain policies for required permissions (for example: access to portions of the host filesystem when necessary and explicit `finish-args` such as allowing `--talk-name=org.freedesktop.Flatpak` or `--talk-name=org.freedesktop.Flatpak`-adjacent permissions). They also declare the use of `flatpak-spawn` where the application needs to delegate execution back to the host, and include module definitions for building the Rust backend, bundling the frontend assets, and packaging auxiliary resources.
 
 - `cargo-sources.json` & `node-sources.json`: These files are generated dependency lists (source manifests) produced by the flatpak-builder-tools generators (e.g., `flatpak-cargo` and `flatpak-node`). They enumerate all upstream crates and npm packages (with resolved tarball URLs and checksums) so `flatpak-builder` can perform an offline, reproducible build inside the Flatpak sandbox. They must be regenerated whenever dependencies change.
 
-- `com.github.kubaguette.EnvStation.metainfo.xml`: The AppStream/Metainfo XML used by Flathub for the store listing. It contains the application description, localized summaries, screenshots, developer/website metadata and the `<release>` history blocks shown on Flathub (used to display changelog and release dates).
+- `io.github.kubaguette.EnvStation.metainfo.xml`: The AppStream/Metainfo XML used by Flathub for the store listing. It contains the application description, localized summaries, screenshots, developer/website metadata and the `<release>` history blocks shown on Flathub (used to display changelog and release dates).
 
-- `com.github.kubaguette.EnvStation.desktop`: The Desktop Entry file used for system integration (menus, MIME associations, and launcher metadata). The Flatpak packaging ensures this desktop file is installed to the runtime as part of the bundle.
+- `io.github.kubaguette.EnvStation.desktop`: The Desktop Entry file used for system integration (menus, MIME associations, and launcher metadata). The Flatpak packaging ensures this desktop file is installed to the runtime as part of the bundle.
 
 Maintenance lifecycle for updates (MUST follow)
 
@@ -898,13 +898,13 @@ To ensure Flathub builds remain reproducible and the store listing stays accurat
    - These generated files ensure the Flatpak build can run without network access and protect against transitive dependency changes.
 
 3. Update AppStream metainfo
-   - Add a new `<release>` block to `com.github.kubaguette.EnvStation.metainfo.xml` containing the new version, the release date (YYYY-MM-DD), and the changelog/notes for that release. This ensures Flathub displays the updated release history and changelog to users.
+   - Add a new `<release>` block to `io.github.kubaguette.EnvStation.metainfo.xml` containing the new version, the release date (YYYY-MM-DD), and the changelog/notes for that release. This ensures Flathub displays the updated release history and changelog to users.
 
 4. Merge manifests and produce the final Flatpak manifest
-   - Run the repository's Python merge script (the project-provided script that merges `manifest.template.json` with generated sources and other overlays) to regenerate the final `com.github.kubaguette.EnvStation.json` manifest consumed by the Flathub build. This step incorporates the regenerated `cargo-sources.json` and `node-sources.json` and injects the updated version metadata.
+   - Run the repository's Python merge script (the project-provided script that merges `manifest.template.json` with generated sources and other overlays) to regenerate the final `io.github.kubaguette.EnvStation.json` manifest consumed by the Flathub build. This step incorporates the regenerated `cargo-sources.json` and `node-sources.json` and injects the updated version metadata.
 
 5. Validate and publish
-   - Run a local `flatpak-builder` dry-run using the generated `com.github.kubaguette.EnvStation.json` to verify the build completes in a clean environment.
+   - Run a local `flatpak-builder` dry-run using the generated `io.github.kubaguette.EnvStation.json` to verify the build completes in a clean environment.
    - Push the updated manifest and metainfo to the Flathub submission flow (or open the Pull Request to the Flathub GitHub repo depending on the chosen distribution model).
 
 Notes and rationale
