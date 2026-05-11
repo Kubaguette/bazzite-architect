@@ -27,7 +27,7 @@ The missing Control Center for reproducible environments using [Distrobox](https
 
 ## 🚀 Demo
 
-![EnvStation Demo](git_src/assets/final_cut.webp)
+![EnvStation Demo](git_src/assets/final_cut_v2.webp)
 
 *Creating a full Python environment and launching VS Code **in under 90 seconds** on Bazzite — UI remains fully responsive. Waiting time skipped in clip.*
 
