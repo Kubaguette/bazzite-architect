@@ -16,6 +16,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 
 const DOC_URL = "https://github.com/Kubaguette/envstation/blob/main/ARCHITECTURE.md";
 const BUG_URL = "https://github.com/Kubaguette/envstation/issues";
+const STAR_URL = "https://github.com/Kubaguette/envstation";
 
 export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
   // 'open' represents logical open state; 'mounted' controls DOM presence to allow exit animation
@@ -70,7 +71,7 @@ export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
     }, MENU_EXIT_MS);
   };
 
-  const onSelect = (what: "docs" | "bug" | "about") => {
+  const onSelect = (what: "docs" | "bug" | "about" | "star") => {
     // close with animation
     handleClose();
     if (what === "about") {
@@ -86,6 +87,15 @@ export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
         openUrl(DOC_URL);
       } catch {
         try { window.open(DOC_URL, "_blank"); } catch { location.href = DOC_URL; }
+      }
+      return;
+    }
+    if (what === "star") {
+      window.dispatchEvent(new CustomEvent("open-support-star"));
+      try {
+        openUrl(STAR_URL);
+      } catch {
+        try { window.open(STAR_URL, "_blank"); } catch { location.href = STAR_URL; }
       }
       return;
     }
@@ -125,6 +135,10 @@ export default function PrimaryMenu({ onAbout }: { onAbout?: () => void }) {
           <button className="menu-item" role="menuitem" onClick={() => onSelect("bug")} data-tauri-drag-region="none">
             <span className="icon" aria-hidden>🐞</span>
             <span className="text">Report a bug</span>
+          </button>
+          <button className="menu-item" role="menuitem" onClick={() => onSelect("star")} data-tauri-drag-region="none">
+            <span className="icon" aria-hidden>🌟</span>
+            <span className="text">Support with a Star</span>
           </button>
           <div className="menu-divider" role="separator" />
           <button className="menu-item" role="menuitem" onClick={() => onSelect("about")} data-tauri-drag-region="none">

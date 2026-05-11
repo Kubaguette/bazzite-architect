@@ -186,22 +186,22 @@ Grab the latest release for your distribution from the [Releases](https://github
 **Fedora / RHEL (.rpm)**
 ```bash
 # Immutable Hosts (Bazzite / Silverblue / Kinoite)
-sudo rpm-ostree install ./EnvStation-1.1.0-1.x86_64.rpm
+sudo rpm-ostree install ./EnvStation-1.1.1-1.x86_64.rpm
 systemctl reboot # Reboot required to apply OSTree deployment
 
 # Traditional Mutable Hosts
-sudo dnf install ./EnvStation-1.1.0-1.x86_64.rpm
+sudo dnf install ./EnvStation-1.1.1-1.x86_64.rpm
 ```
 
 **Debian / Ubuntu (.deb)**
 ```bash
 sudo apt update
-sudo apt install ./EnvStation_1.1.0_amd64.deb
+sudo apt install ./EnvStation_1.1.1_amd64.deb
 ```
 
 **Arch Linux (.pkg.tar.zst)**
 ```bash
-sudo pacman -U ./envstation-1.1.0-1-x86_64.pkg.tar.zst
+sudo pacman -U ./envstation-1.1.1-1-x86_64.pkg.tar.zst
 ```
 
 ---
