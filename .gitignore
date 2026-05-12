@@ -132,10 +132,3 @@ dist
 # Tauri / Rust Build Artifacts
 target/
 src-tauri/target/
-
-# Flatpak Build-Remaining files
-.flatpak-builder/
-build-dir/
-flatpak-venv/
-cargo-home/
-vendor/

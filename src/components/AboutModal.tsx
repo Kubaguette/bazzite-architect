@@ -59,7 +59,7 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
         <div className="body">
           <img src={EnvLogo} alt="EnvStation logo" className={`about-logo ${spinning ? "spin" : ""}`} draggable={false} onClick={onLogoClick} data-tauri-drag-region="none" title="Click me!" />
           <p>EnvStation – Portable Dev Environments.</p>
-          <p>Version: 1.1.1</p>
+          <p>Version: 1.0.0</p>
           <p>License & contributors are listed in the project repository.</p>
         </div>
         <div className="footer">

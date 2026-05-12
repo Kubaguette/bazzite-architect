@@ -10,15 +10,7 @@ use std::process::Command;
 /// throughout the codebase and ensures consistent behavior across sync/async
 /// command paths.
 pub fn build_host_command(base_cmd: &str) -> Command {
-    // If running inside Flatpak, use flatpak-spawn --host to execute on the
-    // host system. Otherwise, if inside a distrobox/container environment,
-    // proxy via distrobox-host-exec. Fall back to direct execution when
-    // running natively.
-    if Path::new("/.flatpak-info").exists() {
-        let mut cmd = Command::new("flatpak-spawn");
-        cmd.arg("--host").arg(base_cmd);
-        cmd
-    } else if Path::new("/run/.containerenv").exists() {
+    if Path::new("/run/.containerenv").exists() {
         let mut cmd = Command::new("distrobox-host-exec");
         cmd.arg(base_cmd);
         cmd
@@ -33,12 +25,7 @@ pub fn build_host_command(base_cmd: &str) -> Command {
 /// Command type to avoid spawning blocking subprocess management code in the
 /// runtime.
 pub fn build_host_command_async(base_cmd: &str) -> tokio::process::Command {
-    // Async variant mirrors the sync behavior but returns a tokio Command.
-    if Path::new("/.flatpak-info").exists() {
-        let mut cmd = tokio::process::Command::new("flatpak-spawn");
-        cmd.arg("--host").arg(base_cmd);
-        cmd
-    } else if Path::new("/run/.containerenv").exists() {
+    if Path::new("/run/.containerenv").exists() {
         let mut cmd = tokio::process::Command::new("distrobox-host-exec");
         cmd.arg(base_cmd);
         cmd

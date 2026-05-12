@@ -66,10 +66,10 @@ export default function DashboardPage() {
     <section className="dashboard-split">
       <div className="actions actions-top" data-tauri-drag-region="none" style={{ gap: 4 }}>
         <button className="action-banner-btn" onClick={() => { setDefaults(null); setShowCreate(true); }} data-tauri-drag-region="none">
-          New Environment
+          New Fedora environment
         </button>
         <button className="action-banner-btn secondary" onClick={() => setShowImport(true)}>
-          Recreate Environment
+          Recreate Fedora Environment
         </button>
       </div>
 
