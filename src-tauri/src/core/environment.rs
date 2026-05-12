@@ -716,7 +716,7 @@ else echo unknown; fi"#;
             template.packages.iter().map(|s| s.trim().to_lowercase()).collect()
         };
         let manifest = EnvironmentManifest {
-            version: "1.0.0".to_string(),
+            version: "1.1.1".to_string(),
             name: params.name.clone(),
             stack: params.template.clone(),
             // system_packages now reflects explicit import values when provided
